@@ -20,7 +20,7 @@ import {
 } from '@sr/shared';
 import { GlassCard, GradeBadge, StatusTag, revealGrade, revealNode } from '@sr/ui';
 import { lookupTicket } from '../api/public';
-import { provideSupplement } from '../api/ticket';
+import { provideSupplement, submitAppeal } from '../api/ticket';
 import { ApiClientError } from '../api/client';
 
 const ACCEPT = [
@@ -39,6 +39,9 @@ const EVENT_COLORS: Record<TicketEventType, string> = {
   receipt_rejected: '#e88b8b',
   review_confirmed: '#a48fff',
   published: '#7ad3a0',
+  receipt_revised: '#e8c477',
+  ticket_updated: '#adb9cf',
+  unpublished: '#f0965f',
 };
 
 interface LookupFormValues {
@@ -57,6 +60,11 @@ export function QueryPage() {
   const [suppFiles, setSuppFiles] = useState<UploadFile[]>([]);
   const [suppNote, setSuppNote] = useState('');
   const [submittingSupp, setSubmittingSupp] = useState(false);
+  const [appealOpen, setAppealOpen] = useState(false);
+  const [appealReason, setAppealReason] = useState('');
+  const [appealContact, setAppealContact] = useState('');
+  const [submittingAppeal, setSubmittingAppeal] = useState(false);
+  const [appealDone, setAppealDone] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -74,6 +82,10 @@ export function QueryPage() {
         query_code: values.query_code.trim(),
       });
       setResult(data);
+      setAppealOpen(false);
+      setAppealDone(false);
+      setAppealReason('');
+      setAppealContact('');
     } catch (err) {
       setResult(null);
       setError((err as ApiClientError).message);
@@ -111,6 +123,29 @@ export function QueryPage() {
       message.error((err as ApiClientError).message);
     } finally {
       setSubmittingSupp(false);
+    }
+  };
+
+  const onAppeal = async () => {
+    if (!identity || !result) return;
+    if (appealReason.trim().length < 5) {
+      message.warning('请填写至少 5 个字的申诉理由');
+      return;
+    }
+    setSubmittingAppeal(true);
+    try {
+      await submitAppeal(result.ticket.id, {
+        circle_name: identity.circle_name.trim(),
+        query_code: identity.query_code.trim(),
+        reason: appealReason.trim(),
+        contact: appealContact.trim() || undefined,
+      });
+      message.success('申诉已提交，审核总管/副总管会尽快处理');
+      setAppealDone(true);
+    } catch (err) {
+      message.error((err as ApiClientError).message);
+    } finally {
+      setSubmittingAppeal(false);
     }
   };
 
@@ -272,6 +307,49 @@ export function QueryPage() {
                       ? ` · ${dayjs(receipt.submitted_at).format('YYYY-MM-DD HH:mm')}`
                       : ''}
                   </div>
+                )}
+              </div>
+            )}
+
+            {(ticket.status === 'resulted' || ticket.status === 'published') && (
+              <div className="receipt-panel" style={{ marginTop: 22 }}>
+                <div className="receipt-panel__title">对结果有异议？</div>
+                {appealDone ? (
+                  <p style={{ color: 'var(--sr-text-mid)', fontSize: 13.5, lineHeight: 1.9, margin: 0 }}>
+                    申诉已提交，审核总管 / 副总管会尽快处理；处理期间无需重复提交，请留意本页的时间线或反馈渠道通知。
+                  </p>
+                ) : appealOpen ? (
+                  <>
+                    <Input.TextArea
+                      style={{ marginTop: 4 }}
+                      rows={4}
+                      maxLength={500}
+                      showCount
+                      value={appealReason}
+                      onChange={(e) => setAppealReason(e.target.value)}
+                      placeholder="请说明申诉理由（至少 5 个字，例如：成绩判定有误、证据未被判读完整等）"
+                    />
+                    <Input
+                      style={{ marginTop: 10 }}
+                      maxLength={64}
+                      value={appealContact}
+                      onChange={(e) => setAppealContact(e.target.value)}
+                      placeholder="备用联系方式（QQ / 微信，可选）"
+                    />
+                    <div style={{ marginTop: 14, display: 'flex', gap: 10 }}>
+                      <Button type="primary" loading={submittingAppeal} onClick={() => void onAppeal()}>
+                        提交申诉
+                      </Button>
+                      <Button onClick={() => setAppealOpen(false)}>取消</Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p style={{ color: 'var(--sr-text-mid)', fontSize: 13.5, lineHeight: 1.9 }}>
+                      申诉将由审核总管 / 副总管复核处理，结果记录在工单时间线中，可随时追溯。
+                    </p>
+                    <Button onClick={() => setAppealOpen(true)}>提交申诉</Button>
+                  </>
                 )}
               </div>
             )}

@@ -178,6 +178,14 @@ export function PublishedPage() {
           )}
         </>
       )}
+
+      <GlassCard tone="strong" className="form-card" style={{ marginTop: 22 }}>
+        <div className="pub-empty" style={{ whiteSpace: 'normal', lineHeight: 1.9 }}>
+          公示墙仅展示脱敏结果。如对审核结果有异议，请持提交时的圈名与查询码前往
+          <a href="/query" style={{ margin: '0 4px' }}>「进度查询」</a>
+          页提交申诉，申诉由审核总管 / 副总管统一处理并可全程追溯。
+        </div>
+      </GlassCard>
     </div>
   );
 }
