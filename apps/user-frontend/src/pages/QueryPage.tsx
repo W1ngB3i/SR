@@ -29,10 +29,10 @@ const ACCEPT = [
 ].join(',');
 
 const EVENT_COLORS: Record<TicketEventType, string> = {
-  submitted: '#6d7890',
+  submitted: '#6f6a5f',
   claimed: '#72dbeb',
   assigned: '#72dbeb',
-  released: '#adb9cf',
+  released: '#b6b0a3',
   supplement_requested: '#f0965f',
   supplement_provided: '#e8c477',
   receipt_submitted: '#b7a3ff',
@@ -40,7 +40,7 @@ const EVENT_COLORS: Record<TicketEventType, string> = {
   review_confirmed: '#a48fff',
   published: '#7ad3a0',
   receipt_revised: '#e8c477',
-  ticket_updated: '#adb9cf',
+  ticket_updated: '#b6b0a3',
   unpublished: '#f0965f',
 };
 

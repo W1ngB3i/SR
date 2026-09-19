@@ -13,10 +13,10 @@
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(7, 11, 22, 0.58);
-  backdrop-filter: blur(20px) saturate(1.3);
-  -webkit-backdrop-filter: blur(20px) saturate(1.3);
-  border-bottom: 1px solid rgba(163, 190, 255, 0.09);
+  background: rgba(10, 10, 9, 0.74);
+  backdrop-filter: blur(18px) saturate(1.25);
+  -webkit-backdrop-filter: blur(18px) saturate(1.25);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .app-header__inner {
@@ -72,7 +72,7 @@
   right: 14px;
   bottom: 1px;
   height: 1.5px;
-  background: var(--sr-cyan);
+  background: var(--sr-gold);
   transform: scaleX(0);
   transform-origin: left center;
   transition: transform var(--sr-dur-slow) var(--sr-ease);
@@ -83,7 +83,7 @@
 }
 
 .app-nav a.active {
-  color: var(--sr-cyan);
+  color: var(--sr-gold);
 }
 
 .app-nav a.active::after {
@@ -104,7 +104,7 @@
   text-align: center;
   font-size: 12px;
   color: var(--sr-text-low);
-  border-top: 1px solid rgba(163, 190, 255, 0.07);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
   letter-spacing: 0.04em;
 }
 
@@ -117,16 +117,18 @@
   font-size: 11px;
   letter-spacing: 0.3em;
   text-transform: uppercase;
-  color: var(--sr-cyan);
-  opacity: 0.85;
+  color: var(--sr-gold);
+  opacity: 0.92;
 }
 
 .page-hero__title {
-  margin: 10px 0 0;
-  font-size: 30px;
-  font-weight: 700;
+  margin: 12px 0 0;
+  font-size: 38px;
+  font-weight: 800;
   color: var(--sr-text-hi);
   letter-spacing: 0.02em;
+  /* 黑金体系的厚重标题：静态金色辉光（不做呼吸/频闪） */
+  text-shadow: 0 0 28px rgba(224, 184, 102, 0.22);
 }
 
 .page-hero__desc {
@@ -156,15 +158,15 @@
   content: '';
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, rgba(163, 190, 255, 0.16), transparent);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.08), transparent);
 }
 
 .hint-lines {
   margin: 4px 0 0;
   padding: 12px 16px;
   border-radius: var(--sr-radius-inner);
-  background: rgba(114, 219, 235, 0.05);
-  border: 1px solid rgba(114, 219, 235, 0.12);
+  background: rgba(224, 184, 102, 0.05);
+  border: 1px solid rgba(224, 184, 102, 0.13);
 }
 
 .hint-lines li {
@@ -267,8 +269,8 @@
   margin-top: 26px;
   padding: 24px 26px;
   border-radius: var(--sr-radius-inner);
-  background: rgba(186, 212, 255, 0.03);
-  border: 1px solid rgba(163, 190, 255, 0.1);
+  background: rgba(255, 255, 255, 0.022);
+  border: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .receipt-panel__title {
@@ -450,7 +452,7 @@
   font-size: 13px;
   line-height: 1.8;
   color: var(--sr-text-mid);
-  border-top: 1px solid rgba(163, 190, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
   padding-top: 12px;
 }
 
@@ -530,14 +532,14 @@
 .rules-mode {
   padding: 12px 16px;
   border-radius: var(--sr-radius-inner);
-  background: rgba(186, 212, 255, 0.03);
-  border: 1px solid rgba(163, 190, 255, 0.09);
+  background: rgba(255, 255, 255, 0.022);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .rules-mode__group {
   font-size: 11px;
   letter-spacing: 0.14em;
-  color: var(--sr-cyan);
+  color: var(--sr-gold);
   opacity: 0.8;
 }
 
@@ -581,7 +583,7 @@
   content: '';
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, rgba(163, 190, 255, 0.16), transparent);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.08), transparent);
 }
 
 .rules-contacts {
@@ -597,7 +599,7 @@
 .rules-contact__role {
   font-size: 11.5px;
   letter-spacing: 0.14em;
-  color: var(--sr-cyan);
+  color: var(--sr-gold);
   opacity: 0.8;
 }
 
