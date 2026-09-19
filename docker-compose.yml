@@ -1,0 +1,72 @@
+# SR 公会审核工单系统 · Docker Compose
+# 使用：先 `cp .env.example .env` 并设置 JWT_SECRET，再 `docker compose up -d --build`
+name: sr-review
+
+services:
+  api:
+    build:
+      context: .
+      target: api
+    environment:
+      NODE_ENV: production
+      PORT: 8787
+      # 生产环境强制显式注入 JWT 密钥（缺失时 compose 直接报错）
+      JWT_SECRET: ${JWT_SECRET:?请先复制 .env.example 为 .env 并设置 JWT_SECRET}
+      SR_DATA_DIR: /data
+      SR_STORAGE_DIR: /storage
+    volumes:
+      - api-data:/data
+      - api-storage:/storage
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8787/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  user-frontend:
+    build:
+      context: .
+      target: user-frontend
+    ports:
+      - "${USER_FRONTEND_PORT:-5173}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  admin-frontend:
+    build:
+      context: .
+      target: admin-frontend
+    ports:
+      - "${ADMIN_FRONTEND_PORT:-5174}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # 每日 03:00（容器时区）自动备份数据库与证据附件，保留 14 天
+  backup:
+    build:
+      context: .
+      target: backup
+    environment:
+      SR_DATA_DIR: /data
+      SR_STORAGE_DIR: /storage
+      SR_BACKUP_DIR: /backups
+      TZ: Asia/Shanghai
+    volumes:
+      - api-data:/data:ro
+      - api-storage:/storage:ro
+      - api-backups:/backups
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  api-data:
+  api-storage:
+  api-backups:
