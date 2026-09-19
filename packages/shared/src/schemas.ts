@@ -29,7 +29,8 @@ export const submitTicketSchema = z.object({
   department_id: z.string().min(1, '请选择审核部门'),
   mode_id: z.string().min(1, '请选择审核模式'),
   module: deviceModuleSchema,
-  self_proof: z.boolean(),
+  // 自证标记：非必填，未填按非自证处理
+  self_proof: z.boolean().optional(),
   contact: contactKeySchema,
 });
 export type SubmitTicketInput = z.infer<typeof submitTicketSchema>;

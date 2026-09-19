@@ -315,7 +315,7 @@ export function SubmitPage() {
           <Form.Item
             name="self_proof"
             label="自证材料（是否为本人操作）"
-            rules={[{ required: true, message: '请选择是否自证' }]}
+            extra="选填：不选则按非自证（常规录像）处理。"
           >
             <Radio.Group
               options={[
