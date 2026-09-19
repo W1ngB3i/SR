@@ -37,9 +37,27 @@ async function pickOption(page: Page, formItemLabel: string, optionText: string 
   throw new Error(`pickOption: 未找到选项 ${String(optionText)}`);
 }
 
-test('主链路：提交 → 接单 → 回执 → 公示 → 查询', async ({ page, browser }) => {
+test('主链路：生成接洽码 → 提交 → 接单 → 回执 → 公示 → 查询', async ({ page, browser }) => {
   // ---------------------------------------------------------------------------
-  // 1. 用户端：提交工单
+  // 1. 管理后台：总管登录并生成一次性接洽码
+  // ---------------------------------------------------------------------------
+  const admin = await browser.newPage();
+  await admin.goto(`${E2E_ADMIN_URL}/#/login`);
+  await admin.getByPlaceholder('如 xingchen').fill(CHIEF.username);
+  await admin.getByPlaceholder('请输入密码').fill(CHIEF.password);
+  await admin.getByRole('button', { name: '登 录' }).click();
+  await expect(admin).toHaveURL(/\/pool$/);
+
+  await admin.goto(`${E2E_ADMIN_URL}/#/keys`);
+  await admin.getByRole('button', { name: /生成接洽码/ }).click();
+  const contactKey = (await admin.locator('.contact-key-modal__code').textContent()) ?? '';
+  expect(contactKey).toMatch(/^[A-Z2-9]{6}$/);
+  await admin.getByRole('button', { name: '我已交付' }).click();
+  // 我的列表中出现刚生成的未使用接洽码
+  await expect(admin.locator('.contact-key-code', { hasText: contactKey })).toBeVisible();
+
+  // ---------------------------------------------------------------------------
+  // 2. 用户端：提交工单
   // ---------------------------------------------------------------------------
   await page.goto('/');
   await expect(page.getByRole('heading', { name: '提交审核申请' })).toBeVisible();
@@ -47,9 +65,8 @@ test('主链路：提交 → 接单 → 回执 → 公示 → 查询', async ({ 
   await expect(page.getByPlaceholder('游戏内使用的圈名')).toBeVisible();
 
   await page.getByPlaceholder('游戏内使用的圈名').fill(CIRCLE);
-  await pickOption(page, '审核意向', 'SR_Group');
-  await page.getByPlaceholder('用于审核员与你沟通补充材料').fill('10000');
-  await pickOption(page, '审核部门', '总部');
+  await page.getByPlaceholder('向审核员索取，如 AB2CDE').fill(contactKey);
+  await pickOption(page, '审核部门', '其他模块');
   await pickOption(page, '审核模式', '建筑');
   await page.getByText('PC PVP（键鼠）', { exact: true }).click();
   await page.getByText('非自证（常规录像）', { exact: true }).click();
@@ -63,15 +80,9 @@ test('主链路：提交 → 接单 → 回执 → 公示 → 查询', async ({ 
   expect(queryCode).toMatch(/^[A-Z2-9]{8}$/);
 
   // ---------------------------------------------------------------------------
-  // 2. 管理后台：总管登录并接单
+  // 3. 管理后台：接单
   // ---------------------------------------------------------------------------
-  const admin = await browser.newPage();
-  await admin.goto(`${E2E_ADMIN_URL}/#/login`);
-  await admin.getByPlaceholder('如 xingchen').fill(CHIEF.username);
-  await admin.getByPlaceholder('请输入密码').fill(CHIEF.password);
-  await admin.getByRole('button', { name: '登 录' }).click();
-  await expect(admin).toHaveURL(/\/pool$/);
-
+  await admin.goto(`${E2E_ADMIN_URL}/#/pool`);
   const pool = admin.getByRole('row').filter({ hasText: CIRCLE });
   await expect(pool).toBeVisible();
   // antd 对两字按钮自动插入空格（「接 单」），用正则兼容两种形态
@@ -92,7 +103,7 @@ test('主链路：提交 → 接单 → 回执 → 公示 → 查询', async ({ 
   await expect(admin.locator('.sr-tag[data-status="reviewing"]')).toBeVisible();
 
   // ---------------------------------------------------------------------------
-  // 3. 填写回执并提交（PC 单端 → 仅 PC 成绩）
+  // 4. 填写回执并提交（PC 单端 → 仅 PC 成绩）
   // ---------------------------------------------------------------------------
   await pickOption(admin, 'PC 端成绩', /^C$/);
   await admin.getByText('通过', { exact: true }).click();
@@ -106,14 +117,14 @@ test('主链路：提交 → 接单 → 回执 → 公示 → 查询', async ({ 
   await expect(admin.getByRole('button', { name: '复核通过并公示' })).toBeVisible();
 
   // ---------------------------------------------------------------------------
-  // 4. 总管复核并公示
+  // 5. 总管复核并公示
   // ---------------------------------------------------------------------------
   await admin.getByRole('button', { name: '复核通过并公示' }).click();
   await admin.getByRole('button', { name: '确认公示' }).click();
   await expect(admin.locator('.sr-tag[data-status="published"]')).toBeVisible();
 
   // ---------------------------------------------------------------------------
-  // 5. 用户端：查询进度查看回执结果（HashRouter：路由在 # 之后）
+  // 6. 用户端：查询进度查看回执结果（HashRouter：路由在 # 之后）
   // ---------------------------------------------------------------------------
   await page.goto('/#/query');
   await page.getByPlaceholder('提交工单时填写的圈名').fill(CIRCLE);
@@ -127,7 +138,7 @@ test('主链路：提交 → 接单 → 回执 → 公示 → 查询', async ({ 
   await expect(page.getByText('推荐部门:作战部')).toBeVisible();
 
   // ---------------------------------------------------------------------------
-  // 6. 公示墙：脱敏卡片可见，且不出现完整圈名
+  // 7. 公示墙：脱敏卡片可见，且不出现完整圈名
   // ---------------------------------------------------------------------------
   await page.goto('/#/published');
   await expect(page.getByRole('heading', { name: '结果公示' })).toBeVisible();
