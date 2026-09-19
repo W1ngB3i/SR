@@ -27,14 +27,35 @@ pnpm -r build
 npx pnpm -C apps/api db:reset
 npx pnpm -C apps/api db:seed
 
-# 4. 启动 API（默认 8787）
-node apps/api/dist/server.js
+# 4. 启动 API（默认 8787；生产必须显式注入 JWT_SECRET）
+JWT_SECRET=$(openssl rand -base64 48) node apps/api/dist/server.js
 
 # 5. 发布前端静态资源
 #    apps/user-frontend/dist 与 apps/admin-frontend/dist
 #    使用 HashRouter，任意静态服务器即可，无需 history 回退配置。
 #    开发期由 Vite 代理 /api → 8787；生产自行指向 API 地址（API 已启用 CORS）。
+#    前端请求使用相对路径 /api，与 API 同域部署时零配置；
+#    跨域部署时需在静态服务器上把 /api 反代到 API。
 ```
+
+### Docker 一键部署（推荐）
+
+```bash
+cp .env.example .env      # 编辑 .env：必须设置 JWT_SECRET（缺失时 compose 拒绝启动）
+docker compose up -d --build
+```
+
+启动后：用户端 `http://localhost:5173`、管理后台 `http://localhost:5174`，`/api` 由站点内 nginx 反代到 API 容器。数据落在命名卷 `api-data` / `api-storage`。另含 `backup` 容器：每日 03:00 自动备份数据库与证据附件到 `api-backups` 卷。
+
+### 备份与恢复
+
+- 容器备份由 `backup` 服务自动执行；宿主机手动备份：`./scripts/backup.sh`（可用 `SR_DATA_DIR` / `SR_STORAGE_DIR` / `SR_BACKUP_DIR` / `SR_BACKUP_KEEP_DAYS` 覆盖路径，默认保留 14 天）。
+- 备份产物：`sr-review-<时间戳>.db`（sqlite3 `.backup` 在线一致性快照，兼容 WAL）+ `storage-<时间戳>.tar.gz`（附件）。
+- 恢复：停服后用备份 db 覆盖 `SR_DATA_DIR/sr-review.db`，tar.gz 解包覆盖附件目录，重启即可。
+
+### 健康检查
+
+`GET /healthz` 返回 `{ ok, uptime, timestamp }`，供负载均衡 / 容器探针使用（compose 已配置 healthcheck）。
 
 可选环境变量：
 
@@ -43,7 +64,7 @@ node apps/api/dist/server.js
 | `PORT` | `8787` | API 监听端口 |
 | `SR_DATA_DIR` | `apps/api/data` | 数据库与 JWT 密钥目录 |
 | `SR_STORAGE_DIR` | `apps/api/storage` | 证据文件落盘目录 |
-| `JWT_SECRET` | 自动生成并持久化 | 生产建议显式指定 |
+| `JWT_SECRET` | 自动生成并持久化 | **生产必须显式指定**（`NODE_ENV=production` 时未注入会拒绝启动） |
 
 种子账号（口令统一 `sr123456`，**上线后立即修改**）：
 
@@ -62,7 +83,7 @@ npx pnpm -C apps/api dev    # API：8787（tsx watch）
 npx pnpm -C apps/user-frontend dev    # 用户端：5173
 npx pnpm -C apps/admin-frontend dev    # 管理端：5174
 pnpm -r typecheck           # 全仓类型检查
-pnpm -r test                # shared + api 单测（22 例）
+pnpm -r test                # shared + api 单测（23 例）
 ```
 
 ---
@@ -95,7 +116,7 @@ API 侧用 `schema.safeParse` 做入参校验并将 zod issue 转为 `FIELD_REQU
 
 ### 3.3 数据模型（SQLite，`apps/api/src/db/schema.sql`）
 
-`user`（账号与角色）、`department` / `mode`（部门与审核模式，级联约束删除）、`ticket`（工单主体 + 查询码 + 冷却判定字段）、`ticket_event`（流转事件，时间线数据源）、`receipt`（回执：PE / PC 成绩、是否通过、去向部门、评语、草稿态）、`attachment`（证据：kind = image / video / other）、`announcement`（公告，置顶与过期）、`audit_log`（后台操作审计，before / after JSON）、`config`（系统配置 K/V）。
+`user`（账号与角色）、`department` / `mode`（部门与审核模式，级联约束删除）、`ticket`（工单主体 + 查询码 + 冷却判定字段）、`ticket_event`（流转事件，时间线数据源）、`receipt`（回执：PE / PC 成绩、是否通过、去向部门、评语、草稿态）、`attachment`（证据：kind = image / video / other）、`appeal`（申诉：凭圈名 + 查询码提交，总管 / 副总管采纳或驳回）、`announcement`（公告，置顶与过期）、`audit_log`（后台操作审计，before / after JSON）、`config`（系统配置 K/V）。
 
 ### 3.4 工单状态机
 
@@ -109,7 +130,7 @@ resulted ──review confirm / publish──▶ published（终态，脱敏公�
 release：reviewing / supplementing ─▶ pending_claim
 ```
 
-约束：`assign` 仅 `pending_claim`；`supplement-request` 仅负责人在 `reviewing` 发起；回执按模块校验——含 PE 模块必填 `pe_grade`、含 PC 必填 `pc_grade`、`pass` 必填，`pass=true` 时 `target_department` 必填。
+约束：`assign` 仅 `pending_claim`；`supplement-request` 仅负责人在 `reviewing` 发起；回执按模块校验——含 PE 模块必填 `pe_grade`、含 PC 必填 `pc_grade`、`pass` 必填，`pass=true` 时 `target_department` 必填。例外通道：总管 / 副总管可直接 `UPDATE` 绕过终态约束把 `published` 拉回 `resulted`（撤销公示），全程留痕 `unpublished` 事件。
 
 ### 3.5 角色权限
 
@@ -120,15 +141,26 @@ release：reviewing / supplementing ─▶ pending_claim
 | 规则配置 / 公告管理 | ❌ | ✅ | ✅ | ❌ |
 | 仪表盘 / 人员 / 审计 / 系统配置 | ❌ | ✅ | ✅ | ✅ |
 
+**总管 / 副总管全权通道**（放开跨工单干预，全部写审计日志）：
+
+| 操作 | 权限 | 说明 |
+| --- | --- | --- |
+| 代提交 / 修订任意工单回执 | deputy + chief | 不限负责人；`resulted` 工单修订不改变状态；已公示工单仅支持提交修订，公示数据即时更新 |
+| 退回任意审核中工单补充材料 | deputy + chief | 不限负责人 |
+| 修订工单基础信息 | deputy + chief | 圈名 / 联系方式 / 意向 / 部门模式 / 模块 / 自证，留 `ticket_updated` 事件 |
+| 撤销公示 | deputy + chief | `published → resulted`，修订后可重新公示 |
+| 删除工单 | deputy + chief | 级联清理回执 / 事件 / 附件（含磁盘文件），不可恢复 |
+| 申诉处理（采纳 / 驳回） | deputy + chief | 管理后台「申诉处理」页 |
+
 服务端 `requireRoles` 强制校验，前端仅做导航裁剪。
 
 ### 3.6 API 一览（前缀 `/api/v1`）
 
-- 公开：`GET /public/rules`、`GET /public/announcements`、`GET /public/published`、`GET /public/tickets/lookup?circle_name&query_code`
-- 申请人（无账号，频控 + 冷却）：`POST /tickets`（multipart：`ticket` 为 JSON 字符串、`files` 证据 ≤6）、`POST /tickets/:id/supplement`
+- 公开：`GET /healthz`、`GET /public/rules`、`GET /public/announcements`、`GET /public/published`、`GET /public/tickets/lookup?circle_name&query_code`
+- 申请人（无账号，频控 + 冷却）：`POST /tickets`（multipart：`ticket` 为 JSON 字符串、`files` 证据 ≤6）、`POST /tickets/:id/supplement`、`POST /tickets/:id/appeals`（凭圈名 + 查询码申诉）
 - 认证：`POST /auth/login`（JWT Bearer）
-- 工单（登录）：`GET /tickets`（tab=待接单/我的在办/全部 + 筛选）、`GET /tickets/assignables`、`GET /tickets/:id`、`POST /tickets/:id/{claim,assign,release,pin,supplement-request,review,publish}`、`PUT /tickets/:id/receipt`
-- 管理：`/admin/departments|modes|users|announcements|audit-logs|stats|config` CRUD 与读
+- 工单（登录）：`GET /tickets`（tab=待接单/我的在办/全部 + 筛选）、`GET /tickets/assignables`、`GET /tickets/:id`、`POST /tickets/:id/{claim,assign,release,pin,supplement-request,review,publish}`、`PUT /tickets/:id/receipt`、`PUT /tickets/:id/info`（总管/副总管修订基础信息）、`POST /tickets/:id/unpublish`（撤销公示）、`DELETE /tickets/:id`（删除）
+- 管理：`/admin/departments|modes|users|announcements|appeals|audit-logs|stats|config` CRUD 与读
 
 ### 3.7 前端约定
 
