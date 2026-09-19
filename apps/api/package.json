@@ -1,0 +1,36 @@
+{
+  "name": "@sr/api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "SR 公会审核工单系统后端 API（Express + SQLite）",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "db:reset": "tsx src/db/cli.ts reset",
+    "db:seed": "tsx src/db/cli.ts seed --force"
+  },
+  "dependencies": {
+    "@sr/shared": "workspace:*",
+    "better-sqlite3": "^13.0.3",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "jose": "^6.2.12",
+    "multer": "^2.4.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^4.17.25",
+    "@types/multer": "^2.2.0",
+    "@types/node": "^20.17.0",
+    "tsx": "^4.23.13",
+    "typescript": "^5.6.3",
+    "vitest": "^5.0.1"
+  }
+}
