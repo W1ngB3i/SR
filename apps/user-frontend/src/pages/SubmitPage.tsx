@@ -12,6 +12,7 @@ import {
   Upload,
   type UploadFile,
 } from 'antd';
+import type { SelectProps } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -83,9 +84,16 @@ export function SubmitPage() {
     [bundle, departmentId],
   );
 
-  /** 模式选项：按 group_name 分组 */
-  const modeOptions = useMemo(() => {
+  /** 模式选项：有分组时按 group_name 分组，否则扁平展示 */
+  const modeOptions = useMemo<SelectProps['options']>(() => {
     if (!selectedDept) return [];
+    const toOption = (m: ModeDTO) => ({
+      value: m.id,
+      label: m.min_requirement ? `${m.name}（${m.min_requirement}）` : m.name,
+    });
+    if (!selectedDept.modes.some((m) => m.group_name)) {
+      return selectedDept.modes.map(toOption);
+    }
     const groups = new Map<string, ModeDTO[]>();
     for (const mode of selectedDept.modes) {
       const key = mode.group_name || '常规';
@@ -95,10 +103,7 @@ export function SubmitPage() {
     }
     return [...groups.entries()].map(([group, modes]) => ({
       label: group,
-      options: modes.map((m) => ({
-        value: m.id,
-        label: m.min_requirement ? `${m.name}（${m.min_requirement}）` : m.name,
-      })),
+      options: modes.map(toOption),
     }));
   }, [selectedDept]);
 
@@ -206,7 +211,7 @@ export function SubmitPage() {
       <div className="page-hero__eyebrow">Submit</div>
       <h1 className="page-hero__title">提交审核申请</h1>
       <p className="page-hero__desc">
-        填写圈名与审核意向，选择目标部门与审核模式并上传证据材料。提交后系统生成唯一查询码，凭「圈名 + 查询码」随时查询进度。
+        向审核员索取一次性接洽码后，填写圈名、选择目标部门与审核模式并上传证据材料。提交后系统生成唯一查询码，凭「圈名 + 查询码」随时查询进度。
       </p>
 
       <GlassCard tone="strong" className="form-card">
@@ -234,29 +239,19 @@ export function SubmitPage() {
             >
               <Input placeholder="游戏内使用的圈名" maxLength={24} showCount />
             </Form.Item>
-
-            <Form.Item
-              name="intention"
-              label="审核意向"
-              rules={[{ required: true, message: '请选择审核意向' }]}
-            >
-              <Select
-                placeholder="选择本次审核面向的 SR 群组"
-                options={bundle.intentions.map((i) => ({ value: i, label: i }))}
-              />
-            </Form.Item>
           </div>
 
           <Form.Item
             name="contact"
-            label="联系方式（QQ / 微信）"
+            label="接洽码"
+            normalize={(v: string) => (typeof v === 'string' ? v.trim().toUpperCase() : v)}
             rules={[
-              { required: true, message: '请填写联系方式' },
-              { min: 4, message: '请填写有效的联系方式' },
-              { max: 64, message: '联系方式不超过 64 个字符' },
+              { required: true, message: '请填写接洽码' },
+              { pattern: /^[A-Z2-9]{6}$/, message: '接洽码为 6 位大写字母或数字' },
             ]}
+            extra="接洽码由审核员生成并一次性使用，请通过 QQ 向审核员索取"
           >
-            <Input placeholder="用于审核员与你沟通补充材料" maxLength={64} />
+            <Input placeholder="向审核员索取，如 AB2CDE" maxLength={6} showCount />
           </Form.Item>
 
           <div className="form-card__section-title">审核目标</div>
