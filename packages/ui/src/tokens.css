@@ -1,28 +1,28 @@
 /* ============================================================
-   SR 深空玻璃主题 tokens
-   基调：深空底色 / 液态玻璃 / 冷青品牌色，克制而厚重
+   SR 黑金玻璃主题 tokens
+   基调：碳黑底色 / 金色品牌 / 厚重玻璃，克制而宏大
+   （参照 sr-space.com 黑金体系）
    ============================================================ */
 :root {
-  /* —— 深空底色 —— */
-  --sr-void-0: #04060d;
-  --sr-void-1: #070b16;
-  --sr-void-2: #0c1222;
+  /* —— 碳黑底色 —— */
+  --sr-void-0: #060605;
+  --sr-void-1: #0a0a09;
+  --sr-void-2: #111110;
 
-  /* —— 文本层级 —— */
-  --sr-text-hi: #e9eef7;
-  --sr-text-mid: #adb9cf;
-  --sr-text-low: #6d7890;
+  /* —— 文本层级：象牙白暖阶 —— */
+  --sr-text-hi: #f4f1e8;
+  --sr-text-mid: #b6b0a3;
+  --sr-text-low: #6f6a5f;
 
-  /* —— 品牌与点缀 —— */
-  --sr-cyan: #72dbeb;
-  --sr-blue: #6d95ff;
-  --sr-violet: #a48fff;
+  /* —— 品牌：黑金体系 —— */
+  --sr-gold: #e0b866;
+  --sr-gold-deep: #c99a3f;
 
-  /* —— 液态玻璃面 —— */
-  --sr-glass-bg: linear-gradient(180deg, rgba(186, 212, 255, 0.055), rgba(126, 154, 224, 0.026));
-  --sr-glass-bg-strong: linear-gradient(180deg, rgba(196, 218, 255, 0.085), rgba(126, 154, 224, 0.045));
-  --sr-glass-border: rgba(163, 190, 255, 0.12);
-  --sr-glass-border-hover: rgba(180, 205, 255, 0.21);
+  /* —— 液态玻璃面（极淡白，碳黑上的厚玻璃） —— */
+  --sr-glass-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.042), rgba(255, 255, 255, 0.018));
+  --sr-glass-bg-strong: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.028));
+  --sr-glass-border: rgba(255, 255, 255, 0.09);
+  --sr-glass-border-hover: rgba(255, 255, 255, 0.17);
   --sr-glass-blur: 22px;
   --sr-glass-blur-strong: 28px;
 
@@ -40,7 +40,7 @@
   --sr-dur-mid: 0.36s;
   --sr-dur-slow: 0.72s;
 
-  /* —— 圆角体系 —— */
-  --sr-radius-card: 18px;
-  --sr-radius-inner: 12px;
+  /* —— 圆角体系（收敛一档，更利落） —— */
+  --sr-radius-card: 13px;
+  --sr-radius-inner: 10px;
 }

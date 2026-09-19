@@ -2,7 +2,7 @@
 
 /* ============================================================
    液态玻璃卡片
-   多层折射：面模糊 + 饱和度提升 + 顶部高光 + 深投影
+   碳黑上的厚玻璃：面模糊 + 顶部高光 + 超深投影（黑金体系的厚重感）
    hover 仅提升描边亮度，不做缩放/位移/变色组合
    ============================================================ */
 .sr-glass {
@@ -10,11 +10,11 @@
   border-radius: var(--sr-radius-card);
   background: var(--sr-glass-bg);
   border: 1px solid var(--sr-glass-border);
-  backdrop-filter: blur(var(--sr-glass-blur)) saturate(1.35);
-  -webkit-backdrop-filter: blur(var(--sr-glass-blur)) saturate(1.35);
+  backdrop-filter: blur(var(--sr-glass-blur)) saturate(1.3);
+  -webkit-backdrop-filter: blur(var(--sr-glass-blur)) saturate(1.3);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 22px 60px -30px rgba(0, 0, 0, 0.6);
+    inset 0 1px 0 rgba(255, 255, 255, 0.055),
+    0 24px 80px -32px rgba(0, 0, 0, 0.85);
   transition: border-color var(--sr-dur-mid) var(--sr-ease);
 }
 
@@ -23,7 +23,7 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 34%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 34%);
   pointer-events: none;
 }
 
@@ -33,8 +33,8 @@
 
 .sr-glass--strong {
   background: var(--sr-glass-bg-strong);
-  backdrop-filter: blur(var(--sr-glass-blur-strong)) saturate(1.45);
-  -webkit-backdrop-filter: blur(var(--sr-glass-blur-strong)) saturate(1.45);
+  backdrop-filter: blur(var(--sr-glass-blur-strong)) saturate(1.4);
+  -webkit-backdrop-filter: blur(var(--sr-glass-blur-strong)) saturate(1.4);
 }
 
 /* ============================================================
@@ -49,9 +49,9 @@
   font-size: 12px;
   line-height: 18px;
   letter-spacing: 0.02em;
-  color: rgb(var(--tag, 170 190 220));
-  background: rgba(var(--tag, 170 190 220), 0.09);
-  border: 1px solid rgba(var(--tag, 170 190 220), 0.3);
+  color: rgb(var(--tag, 182 176 163));
+  background: rgba(var(--tag, 182 176 163), 0.09);
+  border: 1px solid rgba(var(--tag, 182 176 163), 0.3);
   white-space: nowrap;
 }
 
@@ -59,7 +59,7 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: rgb(var(--tag, 170 190 220));
+  background: rgb(var(--tag, 182 176 163));
   flex: none;
 }
 
@@ -70,7 +70,7 @@
 .sr-tag[data-status='published'] { --tag: var(--sr-st-published); }
 
 /* ============================================================
-   等级徽章：E → S+ 逐级抬升，S+ 采用暖金渐变
+   等级徽章：E → S+ 逐级抬升，暖灰起阶、金阶收顶
    ============================================================ */
 .sr-grade {
   display: inline-flex;
@@ -82,8 +82,8 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
-  border: 1px solid rgba(150, 170, 200, 0.24);
-  background: rgba(150, 170, 200, 0.07);
+  border: 1px solid rgba(182, 176, 163, 0.24);
+  background: rgba(182, 176, 163, 0.07);
   color: var(--sr-text-mid);
   white-space: nowrap;
 }
@@ -105,30 +105,30 @@
 
 .sr-grade__value { font-size: 1em; line-height: 1.2; }
 
-.sr-grade[data-grade='E'] { color: #8a92a6; border-color: rgba(138, 146, 166, 0.26); background: rgba(138, 146, 166, 0.08); }
-.sr-grade[data-grade='D'] { color: #9aa5bb; border-color: rgba(154, 165, 187, 0.26); background: rgba(154, 165, 187, 0.08); }
-.sr-grade[data-grade='C'] { color: #a7b8d9; border-color: rgba(167, 184, 217, 0.28); background: rgba(167, 184, 217, 0.09); }
-.sr-grade[data-grade='B'] { color: #7fb9ea; border-color: rgba(127, 185, 234, 0.34); background: rgba(127, 185, 234, 0.1); }
-.sr-grade[data-grade='A'] { color: #72dbeb; border-color: rgba(114, 219, 235, 0.38); background: rgba(114, 219, 235, 0.11); }
-.sr-grade[data-grade='S'] { color: #ffd98a; border-color: rgba(255, 217, 138, 0.42); background: rgba(255, 217, 138, 0.12); }
+.sr-grade[data-grade='E'] { color: #8e8a80; border-color: rgba(142, 138, 128, 0.26); background: rgba(142, 138, 128, 0.08); }
+.sr-grade[data-grade='D'] { color: #a09a8d; border-color: rgba(160, 154, 141, 0.26); background: rgba(160, 154, 141, 0.08); }
+.sr-grade[data-grade='C'] { color: #b8b0a0; border-color: rgba(184, 176, 160, 0.3); background: rgba(184, 176, 160, 0.09); }
+.sr-grade[data-grade='B'] { color: #d3bd8c; border-color: rgba(211, 189, 140, 0.36); background: rgba(211, 189, 140, 0.1); }
+.sr-grade[data-grade='A'] { color: #e0b866; border-color: rgba(224, 184, 102, 0.44); background: rgba(224, 184, 102, 0.12); }
+.sr-grade[data-grade='S'] { color: #ffd98a; border-color: rgba(255, 217, 138, 0.48); background: rgba(255, 217, 138, 0.13); }
 .sr-grade[data-grade='S+'] {
-  color: #ffd98a;
-  border-color: rgba(255, 200, 120, 0.55);
-  background: linear-gradient(135deg, rgba(255, 217, 138, 0.18), rgba(255, 157, 92, 0.14));
+  color: #ffe3a0;
+  border-color: rgba(255, 204, 120, 0.58);
+  background: linear-gradient(135deg, rgba(255, 217, 138, 0.2), rgba(212, 148, 74, 0.15));
 }
 
 .sr-grade--none { font-weight: 500; letter-spacing: 0; }
 
 /* ============================================================
-   深空背景：星云双层长周期漂移（恒定不透明度，仅 transform）
-   + 静态星点 + 噪点，构成视差基底层
+   黑金背景：暗金/琥珀星云双层长周期漂移（恒定不透明度，仅 transform）
+   + 暖白静态星点 + 噪点，构成视差基底层
    ============================================================ */
 .sr-backdrop {
   position: fixed;
   inset: 0;
   z-index: -1;
   background:
-    radial-gradient(ellipse 90% 55% at 50% -12%, rgba(30, 52, 110, 0.34), transparent 70%),
+    radial-gradient(ellipse 90% 55% at 50% -12%, rgba(118, 88, 32, 0.22), transparent 70%),
     var(--sr-void-0);
   overflow: hidden;
 }
@@ -145,7 +145,7 @@
   left: -36vmax;
   width: 118vmax;
   height: 118vmax;
-  background: radial-gradient(circle at 50% 50%, rgba(64, 104, 214, 0.15), transparent 62%);
+  background: radial-gradient(circle at 50% 50%, rgba(196, 148, 60, 0.13), transparent 62%);
   animation: sr-drift-a 47s linear infinite;
 }
 
@@ -154,7 +154,7 @@
   bottom: -62vmax;
   width: 126vmax;
   height: 126vmax;
-  background: radial-gradient(circle at 50% 50%, rgba(120, 74, 200, 0.11), transparent 60%);
+  background: radial-gradient(circle at 50% 50%, rgba(148, 92, 40, 0.1), transparent 60%);
   animation: sr-drift-b 61s linear infinite;
 }
 
@@ -172,23 +172,23 @@
   position: absolute;
   inset: 0;
   background-image:
-    radial-gradient(1px 1px at 12% 22%, rgba(220, 235, 255, 0.42), transparent 100%),
-    radial-gradient(1px 1px at 28% 68%, rgba(220, 235, 255, 0.3), transparent 100%),
-    radial-gradient(1.5px 1.5px at 44% 14%, rgba(200, 226, 255, 0.5), transparent 100%),
-    radial-gradient(1px 1px at 61% 42%, rgba(220, 235, 255, 0.32), transparent 100%),
-    radial-gradient(1px 1px at 76% 78%, rgba(220, 235, 255, 0.4), transparent 100%),
-    radial-gradient(1.5px 1.5px at 88% 30%, rgba(200, 226, 255, 0.44), transparent 100%),
-    radial-gradient(1px 1px at 8% 84%, rgba(220, 235, 255, 0.28), transparent 100%),
-    radial-gradient(1px 1px at 52% 90%, rgba(220, 235, 255, 0.3), transparent 100%),
-    radial-gradient(1px 1px at 95% 62%, rgba(220, 235, 255, 0.34), transparent 100%),
-    radial-gradient(1px 1px at 36% 38%, rgba(220, 235, 255, 0.22), transparent 100%);
+    radial-gradient(1px 1px at 12% 22%, rgba(255, 244, 224, 0.4), transparent 100%),
+    radial-gradient(1px 1px at 28% 68%, rgba(255, 244, 224, 0.28), transparent 100%),
+    radial-gradient(1.5px 1.5px at 44% 14%, rgba(255, 232, 196, 0.46), transparent 100%),
+    radial-gradient(1px 1px at 61% 42%, rgba(255, 244, 224, 0.3), transparent 100%),
+    radial-gradient(1px 1px at 76% 78%, rgba(255, 244, 224, 0.38), transparent 100%),
+    radial-gradient(1.5px 1.5px at 88% 30%, rgba(255, 232, 196, 0.4), transparent 100%),
+    radial-gradient(1px 1px at 8% 84%, rgba(255, 244, 224, 0.26), transparent 100%),
+    radial-gradient(1px 1px at 52% 90%, rgba(255, 244, 224, 0.28), transparent 100%),
+    radial-gradient(1px 1px at 95% 62%, rgba(255, 244, 224, 0.32), transparent 100%),
+    radial-gradient(1px 1px at 36% 38%, rgba(255, 244, 224, 0.2), transparent 100%);
 }
 
 .sr-backdrop__grain {
   position: absolute;
   inset: 0;
   opacity: 0.035;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'%3E%3C/svg%3E");
 }
 
 @media (prefers-reduced-motion: reduce) {
