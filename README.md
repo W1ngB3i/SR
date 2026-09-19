@@ -84,6 +84,7 @@ npx pnpm -C apps/user-frontend dev    # 用户端：5173
 npx pnpm -C apps/admin-frontend dev    # 管理端：5174
 pnpm -r typecheck           # 全仓类型检查
 pnpm -r test                # shared + api 单测（23 例）
+pnpm -C e2e test            # E2E 主链路（Playwright，独立实例，不污染本地数据）
 ```
 
 ---
@@ -175,3 +176,12 @@ release：reviewing / supplementing ─▶ pending_claim
 2. shared 改动未重建 dist 时，下游会报「无此导出」——先 `npx pnpm -C packages/shared build`。
 3. `db:reset` 会清空 `sr-review.db` 并重置为种子态（6 账号 / 7 部门 / 29 模式 / 10 演示工单）。
 4. 上传限制（扩展名白名单、单文件 200MB、每单 6 个）与提交冷却在「系统配置」页可调，实时生效。
+
+### 3.9 E2E 主链路测试（`e2e/`）
+
+Playwright 单条主链路用例：**提交工单 → 总管接单 → 填回执 → 复核公示 → 用户查询回执 → 公示墙脱敏校验**。
+
+- **独立实例**：`e2e/scripts/serve.mjs` 负责在临时目录拉起全新 SQLite（自动种子）+ API（8788）+ 两个前端（5273 / 5274），与本地开发服务（8787 / 5173 / 5174）完全隔离，不触碰真实数据。
+- **端口可调**：环境变量 `SR_E2E_API_PORT` / `SR_E2E_USER_PORT` / `SR_E2E_ADMIN_PORT`；本地开发服务的端口/代理也可用 `SR_PORT` / `SR_API_TARGET` 注入。
+- **首次运行**需安装浏览器：`pnpm -C e2e exec playwright install chromium`。
+- CI 中为独立 job（`.github/workflows/ci.yml`），失败时上传 HTML 报告产物。

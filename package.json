@@ -11,6 +11,7 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm --filter @sr/shared build && pnpm -r typecheck",
     "test": "pnpm -r test",
+    "e2e": "pnpm -C e2e test:e2e",
     "dev": "pnpm --filter @sr/shared build && pnpm --filter @sr/ui build && pnpm --parallel --filter @sr/api --filter @sr/user-frontend --filter @sr/admin-frontend run dev",
     "dev:api": "pnpm --filter @sr/api run dev",
     "dev:user": "pnpm --filter @sr/user-frontend run dev",

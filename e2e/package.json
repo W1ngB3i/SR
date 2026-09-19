@@ -1,0 +1,16 @@
+{
+  "name": "@sr/e2e",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "SR 公会审核工单系统 · Playwright E2E 主链路测试",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:ui": "playwright test --ui",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0",
+    "@types/node": "^20.17.0"
+  }
+}
