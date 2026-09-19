@@ -19,6 +19,14 @@ export const API = {
     receipt: (id: string) => `${API_PREFIX}/tickets/${id}/receipt`,
     review: (id: string) => `${API_PREFIX}/tickets/${id}/review`,
     publish: (id: string) => `${API_PREFIX}/tickets/${id}/publish`,
+    /** 总管/副总管修订工单基础信息 */
+    info: (id: string) => `${API_PREFIX}/tickets/${id}/info`,
+    /** 总管/副总管撤销公示（已公示 → 已出结果） */
+    unpublish: (id: string) => `${API_PREFIX}/tickets/${id}/unpublish`,
+    /** 总管/副总管删除工单（即 DELETE detail 路径） */
+    remove: (id: string) => `${API_PREFIX}/tickets/${id}`,
+    /** 申请人提交申诉（公开，凭圈名 + 查询码） */
+    appeal: (id: string) => `${API_PREFIX}/tickets/${id}/appeals`,
     attachmentUrl: (id: string) => `${API_PREFIX}/attachments/${id}`,
   },
   publicApi: {
@@ -40,6 +48,8 @@ export const API = {
     resetPassword: (id: string) => `${API_PREFIX}/admin/users/${id}/reset-password`,
     announcements: `${API_PREFIX}/admin/announcements`,
     announcement: (id: string) => `${API_PREFIX}/admin/announcements/${id}`,
+    appeals: `${API_PREFIX}/admin/appeals`,
+    appeal: (id: string) => `${API_PREFIX}/admin/appeals/${id}`,
     stats: `${API_PREFIX}/admin/stats`,
   },
   files: {

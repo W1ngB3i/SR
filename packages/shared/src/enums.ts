@@ -56,5 +56,19 @@ export const TicketEventType = {
   ReceiptRejected: 'receipt_rejected',
   ReviewConfirmed: 'review_confirmed',
   Published: 'published',
+  /** 总管/副总管修订已提交的回执 */
+  ReceiptRevised: 'receipt_revised',
+  /** 总管/副总管修订工单基础信息 */
+  TicketUpdated: 'ticket_updated',
+  /** 总管/副总管撤销公示（已公示 → 已出结果） */
+  Unpublished: 'unpublished',
 } as const;
 export type TicketEventType = (typeof TicketEventType)[keyof typeof TicketEventType];
+
+/** 申诉状态：待处理 / 已采纳 / 已驳回 */
+export const AppealStatus = {
+  Open: 'open',
+  Resolved: 'resolved',
+  Dismissed: 'dismissed',
+} as const;
+export type AppealStatus = (typeof AppealStatus)[keyof typeof AppealStatus];

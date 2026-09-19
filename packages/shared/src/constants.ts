@@ -1,4 +1,4 @@
-﻿import type { DeviceModule, Grade, StaffRole, TicketEventType, TicketStatus } from './enums.js';
+﻿import type { AppealStatus, DeviceModule, Grade, StaffRole, TicketEventType, TicketStatus } from './enums.js';
 
 export const STATUS_LABELS: Record<TicketStatus, string> = {
   draft: '草稿',
@@ -33,6 +33,15 @@ export const EVENT_LABELS: Record<TicketEventType, string> = {
   receipt_rejected: '复核退回',
   review_confirmed: '复核通过',
   published: '结果公示',
+  receipt_revised: '回执修订',
+  ticket_updated: '工单信息修订',
+  unpublished: '撤销公示',
+};
+
+export const APPEAL_STATUS_LABELS: Record<AppealStatus, string> = {
+  open: '待处理',
+  resolved: '已采纳',
+  dismissed: '已驳回',
 };
 
 export const GRADE_LABELS: Record<Grade, string> = {

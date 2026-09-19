@@ -1,4 +1,5 @@
 import type {
+  AppealStatus,
   DeviceModule,
   Grade,
   StaffRole,
@@ -211,4 +212,20 @@ export interface StatsDTO {
   active_reviewers: number;
   per_department: { department_id: string; department_name: string; count: number }[];
   recent_published: PublicityItemDTO[];
+}
+
+/** 申诉记录（工单子记录） */
+export interface AppealDTO {
+  id: string;
+  ticket_id: string;
+  circle_name: string;
+  department_name: string;
+  mode_name: string;
+  status: AppealStatus;
+  reason: string;
+  contact: string;
+  handle_note: string;
+  handled_by_name: string | null;
+  handled_at: string | null;
+  created_at: string;
 }

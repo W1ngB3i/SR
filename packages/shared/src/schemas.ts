@@ -1,4 +1,4 @@
-﻿import { z } from 'zod';
+import { z } from 'zod';
 import { GRADES } from './enums.js';
 
 export const gradeSchema = z.enum(GRADES);
@@ -128,6 +128,35 @@ export const userUpdateSchema = z.object({
 
 export const passwordResetSchema = z.object({
   password: z.string().min(8, '密码至少 8 位').max(64),
+});
+
+/** 总管/副总管修订工单基础信息（至少提供一项） */
+export const ticketInfoUpdateSchema = z
+  .object({
+    circle_name: z.string().trim().min(1, '圈名不能为空').max(24, '圈名不超过 24 个字符').optional(),
+    contact: z.string().trim().min(4, '联系方式至少 4 个字符').max(64).optional(),
+    intention: z.string().trim().min(1, '审核意向不能为空').max(40).optional(),
+    department_id: z.string().min(1).optional(),
+    mode_id: z.string().min(1).optional(),
+    module: deviceModuleSchema.optional(),
+    self_proof: z.boolean().optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: '至少提供一项修改' });
+export type TicketInfoUpdateInput = z.infer<typeof ticketInfoUpdateSchema>;
+
+/** 申请人提交申诉（工单子记录，凭圈名 + 查询码校验身份） */
+export const appealCreateSchema = z.object({
+  circle_name: z.string().trim().min(1, '请填写圈名').max(24),
+  query_code: queryCodeSchema,
+  reason: z.string().trim().min(5, '请填写至少 5 个字的申诉理由').max(500, '申诉理由不超过 500 字'),
+  contact: z.string().trim().max(64).optional().default(''),
+});
+export type AppealCreateInput = z.infer<typeof appealCreateSchema>;
+
+/** 管理端处理申诉 */
+export const appealHandleSchema = z.object({
+  action: z.enum(['resolve', 'dismiss']),
+  note: z.string().trim().max(300).optional().default(''),
 });
 
 export const listQuerySchema = z.object({
