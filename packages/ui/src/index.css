@@ -1,0 +1,196 @@
+@import './tokens.css';
+
+/* ============================================================
+   液态玻璃卡片
+   多层折射：面模糊 + 饱和度提升 + 顶部高光 + 深投影
+   hover 仅提升描边亮度，不做缩放/位移/变色组合
+   ============================================================ */
+.sr-glass {
+  position: relative;
+  border-radius: var(--sr-radius-card);
+  background: var(--sr-glass-bg);
+  border: 1px solid var(--sr-glass-border);
+  backdrop-filter: blur(var(--sr-glass-blur)) saturate(1.35);
+  -webkit-backdrop-filter: blur(var(--sr-glass-blur)) saturate(1.35);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 22px 60px -30px rgba(0, 0, 0, 0.6);
+  transition: border-color var(--sr-dur-mid) var(--sr-ease);
+}
+
+.sr-glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 34%);
+  pointer-events: none;
+}
+
+.sr-glass:hover {
+  border-color: var(--sr-glass-border-hover);
+}
+
+.sr-glass--strong {
+  background: var(--sr-glass-bg-strong);
+  backdrop-filter: blur(var(--sr-glass-blur-strong)) saturate(1.45);
+  -webkit-backdrop-filter: blur(var(--sr-glass-blur-strong)) saturate(1.45);
+}
+
+/* ============================================================
+   状态标签：色相区分状态，静态圆点，无闪烁
+   ============================================================ */
+.sr-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 18px;
+  letter-spacing: 0.02em;
+  color: rgb(var(--tag, 170 190 220));
+  background: rgba(var(--tag, 170 190 220), 0.09);
+  border: 1px solid rgba(var(--tag, 170 190 220), 0.3);
+  white-space: nowrap;
+}
+
+.sr-tag__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgb(var(--tag, 170 190 220));
+  flex: none;
+}
+
+.sr-tag[data-status='pending_claim'] { --tag: var(--sr-st-pending); }
+.sr-tag[data-status='reviewing'] { --tag: var(--sr-st-reviewing); }
+.sr-tag[data-status='supplementing'] { --tag: var(--sr-st-supplementing); }
+.sr-tag[data-status='resulted'] { --tag: var(--sr-st-resulted); }
+.sr-tag[data-status='published'] { --tag: var(--sr-st-published); }
+
+/* ============================================================
+   等级徽章：E → S+ 逐级抬升，S+ 采用暖金渐变
+   ============================================================ */
+.sr-grade {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  border: 1px solid rgba(150, 170, 200, 0.24);
+  background: rgba(150, 170, 200, 0.07);
+  color: var(--sr-text-mid);
+  white-space: nowrap;
+}
+
+.sr-grade--sm {
+  padding: 2px 8px;
+  font-size: 12px;
+  border-radius: 8px;
+}
+
+.sr-grade--md { font-size: 15px; }
+
+.sr-grade__prefix {
+  font-size: 0.72em;
+  font-weight: 600;
+  color: var(--sr-text-low);
+  letter-spacing: 0.08em;
+}
+
+.sr-grade__value { font-size: 1em; line-height: 1.2; }
+
+.sr-grade[data-grade='E'] { color: #8a92a6; border-color: rgba(138, 146, 166, 0.26); background: rgba(138, 146, 166, 0.08); }
+.sr-grade[data-grade='D'] { color: #9aa5bb; border-color: rgba(154, 165, 187, 0.26); background: rgba(154, 165, 187, 0.08); }
+.sr-grade[data-grade='C'] { color: #a7b8d9; border-color: rgba(167, 184, 217, 0.28); background: rgba(167, 184, 217, 0.09); }
+.sr-grade[data-grade='B'] { color: #7fb9ea; border-color: rgba(127, 185, 234, 0.34); background: rgba(127, 185, 234, 0.1); }
+.sr-grade[data-grade='A'] { color: #72dbeb; border-color: rgba(114, 219, 235, 0.38); background: rgba(114, 219, 235, 0.11); }
+.sr-grade[data-grade='S'] { color: #ffd98a; border-color: rgba(255, 217, 138, 0.42); background: rgba(255, 217, 138, 0.12); }
+.sr-grade[data-grade='S+'] {
+  color: #ffd98a;
+  border-color: rgba(255, 200, 120, 0.55);
+  background: linear-gradient(135deg, rgba(255, 217, 138, 0.18), rgba(255, 157, 92, 0.14));
+}
+
+.sr-grade--none { font-weight: 500; letter-spacing: 0; }
+
+/* ============================================================
+   深空背景：星云双层长周期漂移（恒定不透明度，仅 transform）
+   + 静态星点 + 噪点，构成视差基底层
+   ============================================================ */
+.sr-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse 90% 55% at 50% -12%, rgba(30, 52, 110, 0.34), transparent 70%),
+    var(--sr-void-0);
+  overflow: hidden;
+}
+
+.sr-backdrop__nebula {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(64px);
+  will-change: transform;
+}
+
+.sr-backdrop__nebula--a {
+  top: -58vmax;
+  left: -36vmax;
+  width: 118vmax;
+  height: 118vmax;
+  background: radial-gradient(circle at 50% 50%, rgba(64, 104, 214, 0.15), transparent 62%);
+  animation: sr-drift-a 47s linear infinite;
+}
+
+.sr-backdrop__nebula--b {
+  right: -42vmax;
+  bottom: -62vmax;
+  width: 126vmax;
+  height: 126vmax;
+  background: radial-gradient(circle at 50% 50%, rgba(120, 74, 200, 0.11), transparent 60%);
+  animation: sr-drift-b 61s linear infinite;
+}
+
+@keyframes sr-drift-a {
+  from { transform: translate3d(0, 0, 0) rotate(0deg); }
+  to { transform: translate3d(7vmax, 4.5vmax, 0) rotate(20deg); }
+}
+
+@keyframes sr-drift-b {
+  from { transform: translate3d(0, 0, 0) rotate(0deg); }
+  to { transform: translate3d(-6vmax, -7vmax, 0) rotate(-16deg); }
+}
+
+.sr-backdrop__stars {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 12% 22%, rgba(220, 235, 255, 0.42), transparent 100%),
+    radial-gradient(1px 1px at 28% 68%, rgba(220, 235, 255, 0.3), transparent 100%),
+    radial-gradient(1.5px 1.5px at 44% 14%, rgba(200, 226, 255, 0.5), transparent 100%),
+    radial-gradient(1px 1px at 61% 42%, rgba(220, 235, 255, 0.32), transparent 100%),
+    radial-gradient(1px 1px at 76% 78%, rgba(220, 235, 255, 0.4), transparent 100%),
+    radial-gradient(1.5px 1.5px at 88% 30%, rgba(200, 226, 255, 0.44), transparent 100%),
+    radial-gradient(1px 1px at 8% 84%, rgba(220, 235, 255, 0.28), transparent 100%),
+    radial-gradient(1px 1px at 52% 90%, rgba(220, 235, 255, 0.3), transparent 100%),
+    radial-gradient(1px 1px at 95% 62%, rgba(220, 235, 255, 0.34), transparent 100%),
+    radial-gradient(1px 1px at 36% 38%, rgba(220, 235, 255, 0.22), transparent 100%);
+}
+
+.sr-backdrop__grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sr-backdrop__nebula { animation: none; }
+}

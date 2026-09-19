@@ -1,0 +1,46 @@
+/* ============================================================
+   SR 深空玻璃主题 tokens
+   基调：深空底色 / 液态玻璃 / 冷青品牌色，克制而厚重
+   ============================================================ */
+:root {
+  /* —— 深空底色 —— */
+  --sr-void-0: #04060d;
+  --sr-void-1: #070b16;
+  --sr-void-2: #0c1222;
+
+  /* —— 文本层级 —— */
+  --sr-text-hi: #e9eef7;
+  --sr-text-mid: #adb9cf;
+  --sr-text-low: #6d7890;
+
+  /* —— 品牌与点缀 —— */
+  --sr-cyan: #72dbeb;
+  --sr-blue: #6d95ff;
+  --sr-violet: #a48fff;
+
+  /* —— 液态玻璃面 —— */
+  --sr-glass-bg: linear-gradient(180deg, rgba(186, 212, 255, 0.055), rgba(126, 154, 224, 0.026));
+  --sr-glass-bg-strong: linear-gradient(180deg, rgba(196, 218, 255, 0.085), rgba(126, 154, 224, 0.045));
+  --sr-glass-border: rgba(163, 190, 255, 0.12);
+  --sr-glass-border-hover: rgba(180, 205, 255, 0.21);
+  --sr-glass-blur: 22px;
+  --sr-glass-blur-strong: 28px;
+
+  /* —— 工单状态色（RGB 通道，供 rgba/color-mix 组合） —— */
+  --sr-st-pending: 232 196 119;
+  --sr-st-reviewing: 111 211 232;
+  --sr-st-supplementing: 240 150 95;
+  --sr-st-resulted: 183 163 255;
+  --sr-st-published: 122 211 160;
+
+  /* —— 动效曲线与时长 —— */
+  --sr-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --sr-ease-damp: cubic-bezier(0.34, 1.36, 0.42, 1);
+  --sr-dur-fast: 0.18s;
+  --sr-dur-mid: 0.36s;
+  --sr-dur-slow: 0.72s;
+
+  /* —— 圆角体系 —— */
+  --sr-radius-card: 18px;
+  --sr-radius-inner: 12px;
+}
