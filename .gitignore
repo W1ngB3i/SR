@@ -6,6 +6,10 @@ coverage/
 # 运行期数据（数据库与上传文件）
 apps/api/data/
 apps/api/storage/
+# 备份脚本默认输出目录（含数据库快照）
+backups/
+# 数据库文件兜底（任何位置的 .db）
+*.db
 
 # 本地环境
 .env
