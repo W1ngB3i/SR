@@ -1,0 +1,901 @@
+/* ============================================================
+   SR 公会落地页
+   视觉基调：碳黑底的竞技编年史 —— 黑白主调、单一竞技黄、
+   大字重中文标题、宣传片画面作为唯一图像语言。
+   与审核系统的玻璃体系刻意区分：这里不用卡片、不用渐变光效。
+   ============================================================ */
+
+@font-face {
+  font-family: 'Anton';
+  src: url('/fonts/anton-latin-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* 落地页自成一套排版，先把盒模型收干净（全站未设全局 border-box，否则 100% + 内边距会溢出） */
+.sv-landing,
+.sv-landing *,
+.sv-landing *::before,
+.sv-landing *::after {
+  box-sizing: border-box;
+}
+
+.sv-landing {
+  /* —— 色板：黑 / 米白 / 竞技黄 —— */
+  --sv-black: #0a0a09;
+  --sv-black-2: #121110;
+  --sv-cream: #f1eee4;
+  --sv-ink: #141311;
+  --sv-white: #f5f2ea;
+  --sv-gray: #8d897c;
+  --sv-gray-2: #66625a;
+  --sv-gray-ink: #6f6b62;
+  --sv-yellow: #ffc627;
+
+  --sv-font-cn: 'PingFang SC', 'HarmonyOS Sans SC', 'Microsoft YaHei UI', 'Microsoft YaHei',
+    'Heiti SC', system-ui, -apple-system, sans-serif;
+  --sv-font-num: 'Anton', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+
+  --sv-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --sv-pad: clamp(20px, 5vw, 64px);
+
+  background: var(--sv-black);
+  color: var(--sv-white);
+  font-family: var(--sv-font-cn);
+  /* 落地页不继承审核系统的玻璃体系 */
+  min-height: 100vh;
+}
+
+/* 入场动效：滚动进入视口后上移淡入，逐项延迟由 --d 控制 */
+.sv-landing [data-reveal] {
+  opacity: 0;
+  transform: translate3d(0, 26px, 0);
+  transition:
+    opacity 0.95s var(--sv-ease),
+    transform 0.95s var(--sv-ease);
+  transition-delay: var(--d, 0s);
+}
+
+.sv-landing [data-reveal].is-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* —— 顶部导航：起始透明，滚过首屏后落到实底 —— */
+.sv-nav {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: clamp(16px, 3vw, 40px);
+  padding: 0 var(--sv-pad);
+  height: 68px;
+  transition:
+    background 0.45s var(--sv-ease),
+    border-color 0.45s var(--sv-ease);
+  border-bottom: 1px solid transparent;
+}
+
+.sv-nav.is-stuck {
+  background: rgba(10, 10, 9, 0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.sv-nav__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--sv-white);
+  margin-right: auto;
+}
+
+.sv-nav__mark {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+
+.sv-nav__word {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.sv-nav__word em {
+  font-style: normal;
+  color: var(--sv-gray);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  margin-left: 8px;
+}
+
+.sv-nav__links {
+  display: flex;
+  gap: 4px;
+}
+
+.sv-nav__links a,
+.sv-nav__links button {
+  appearance: none;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 13.5px;
+  color: var(--sv-gray);
+  text-decoration: none;
+  letter-spacing: 0.04em;
+  transition: color 0.3s var(--sv-ease);
+}
+
+.sv-nav__links a:hover,
+.sv-nav__links button:hover {
+  color: var(--sv-white);
+}
+
+.sv-nav__cta {
+  flex: none;
+}
+
+/* —— 主按钮：整个页面唯一的高饱和黄色块 —— */
+.sv-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 26px;
+  border-radius: 2px;
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  /* button 元素需显式清掉 UA 默认底色，否则会渲染成灰色块 */
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition:
+    transform 0.4s var(--sv-ease),
+    background 0.4s var(--sv-ease),
+    color 0.4s var(--sv-ease),
+    border-color 0.4s var(--sv-ease);
+}
+
+.sv-btn--solid {
+  background: var(--sv-yellow);
+  color: #17150f;
+}
+
+.sv-btn--solid:hover {
+  background: #ffd75c;
+  transform: translateY(-2px);
+}
+
+.sv-btn--ghost {
+  color: var(--sv-white);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.sv-btn--ghost:hover {
+  border-color: var(--sv-white);
+  background: rgba(255, 255, 255, 0.06);
+  transform: translateY(-2px);
+}
+
+.sv-btn--sm {
+  padding: 9px 18px;
+  font-size: 13px;
+}
+
+/* 首屏不与 Hero 主按钮争黄：顶部时是描边按钮，滚过首屏才转实底。
+   必须排在上面 .sv-btn 之后，否则描边会被其 border 简写覆盖。 */
+.sv-nav__cta {
+  color: var(--sv-white);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.sv-nav__cta:hover {
+  border-color: var(--sv-white);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.sv-nav.is-stuck .sv-nav__cta {
+  background: var(--sv-yellow);
+  border-color: var(--sv-yellow);
+  color: #17150f;
+}
+
+.sv-nav.is-stuck .sv-nav__cta:hover {
+  background: #ffd75c;
+  border-color: #ffd75c;
+}
+
+/* ============================================================
+   1 · Hero
+   满幅宣传片画面 + 压暗遮罩，底部压一条公告
+   ============================================================ */
+.sv-hero {
+  position: relative;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.sv-hero__bg {
+  position: absolute;
+  inset: -6% -2% 0;
+  z-index: -2;
+  will-change: transform;
+}
+
+.sv-hero__bg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 34%;
+  /* 入场：一次性轻微沉降，不做循环缩放 */
+  animation: sv-settle 1.8s var(--sv-ease) both;
+}
+
+@keyframes sv-settle {
+  from {
+    transform: scale(1.07);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* 遮罩：左侧压深保证文字可读，底部渐入纯黑与下一段衔接 */
+.sv-hero__veil {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(90deg, rgba(4, 4, 4, 0.94) 0%, rgba(4, 4, 4, 0.72) 42%, rgba(4, 4, 4, 0.28) 100%),
+    linear-gradient(180deg, rgba(4, 4, 4, 0.76) 0%, rgba(4, 4, 4, 0.2) 34%, rgba(4, 4, 4, 0.88) 100%);
+}
+
+.sv-hero__inner {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 var(--sv-pad) clamp(28px, 6vh, 72px);
+}
+
+.sv-hero__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--sv-gray);
+}
+
+.sv-hero__eyebrow::after {
+  content: '';
+  width: 46px;
+  height: 1px;
+  background: var(--sv-gray-2);
+}
+
+.sv-hero__title {
+  margin: 20px 0 0;
+  font-size: clamp(2.3rem, 6.4vw, 5.2rem);
+  font-weight: 800;
+  line-height: 1.14;
+  letter-spacing: 0.01em;
+  color: var(--sv-white);
+  text-wrap: balance;
+}
+
+.sv-hero__title span {
+  display: block;
+}
+
+.sv-hero__sub {
+  margin: 22px 0 0;
+  max-width: 30em;
+  font-size: clamp(14px, 1.35vw, 16px);
+  line-height: 2;
+  color: #c8c4b8;
+}
+
+.sv-hero__sub b {
+  font-weight: 600;
+  color: var(--sv-white);
+}
+
+.sv-hero__cta {
+  margin-top: 34px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* 底部公告条：细分割线 + 左侧小字 + 右侧黄色链接 */
+.sv-ticker {
+  margin-top: clamp(34px, 7vh, 76px);
+  padding: 15px 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.sv-ticker__text {
+  font-size: 12.5px;
+  letter-spacing: 0.05em;
+  color: var(--sv-gray);
+}
+
+.sv-ticker__link {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--sv-yellow);
+  text-decoration: none;
+  transition: opacity 0.3s var(--sv-ease);
+}
+
+.sv-ticker__link:hover {
+  opacity: 0.75;
+}
+
+/* ============================================================
+   2 · 米白宣言 + 纯文字数据网格
+   ============================================================ */
+.sv-manifesto {
+  background: var(--sv-cream);
+  color: var(--sv-ink);
+  padding: clamp(72px, 13vh, 148px) var(--sv-pad);
+}
+
+.sv-wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.sv-manifesto__lines {
+  font-size: clamp(1.85rem, 4.6vw, 3.7rem);
+  font-weight: 800;
+  line-height: 1.34;
+  letter-spacing: 0.01em;
+}
+
+.sv-manifesto__lines span {
+  display: block;
+}
+
+/* 首行压深、后行浅灰，靠明度差拉出层次，不加装饰 */
+.sv-manifesto__lines span + span {
+  color: #a9a496;
+}
+
+.sv-manifesto__lede {
+  margin: 34px 0 0;
+  max-width: 40em;
+  font-size: clamp(14px, 1.3vw, 15.5px);
+  line-height: 2.15;
+  color: #4d4a42;
+}
+
+/* 数据区：没有卡片、没有边框，数字本身就是主角 */
+.sv-stats {
+  margin-top: clamp(56px, 10vh, 104px);
+  padding-top: 34px;
+  border-top: 1px solid rgba(20, 19, 17, 0.14);
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: clamp(20px, 3vw, 44px);
+}
+
+.sv-stat__num {
+  font-family: var(--sv-font-num);
+  font-size: clamp(2.1rem, 4.4vw, 3.5rem);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: var(--sv-ink);
+}
+
+/* 黄色只给年份与关键比分 */
+.sv-stat--key .sv-stat__num {
+  color: #d8a30c;
+}
+
+.sv-stat__num small {
+  font-size: 0.44em;
+  letter-spacing: 0.08em;
+  margin-left: 4px;
+}
+
+.sv-stat__label {
+  margin-top: 12px;
+  font-size: 12.5px;
+  letter-spacing: 0.04em;
+  color: var(--sv-gray-ink);
+}
+
+/* ============================================================
+   3 · 四个分部：左右图文交替
+   ============================================================ */
+.sv-divisions {
+  background: var(--sv-black);
+  padding: clamp(72px, 13vh, 152px) var(--sv-pad);
+}
+
+.sv-sec-head {
+  margin-bottom: clamp(46px, 8vh, 86px);
+}
+
+.sv-sec-head__eyebrow {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--sv-gray-2);
+}
+
+.sv-sec-head__title {
+  margin: 16px 0 0;
+  font-size: clamp(1.6rem, 3.4vw, 2.6rem);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: var(--sv-white);
+}
+
+.sv-sec-head--ink .sv-sec-head__title {
+  color: var(--sv-ink);
+}
+
+.sv-sec-head--ink .sv-sec-head__eyebrow {
+  color: #9b968a;
+}
+
+.sv-division {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(24px, 5vw, 76px);
+  padding: clamp(30px, 5vh, 54px) 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.sv-division:first-of-type {
+  border-top: 0;
+}
+
+/* 偶数行把图放到右侧 */
+.sv-division--flip .sv-division__media {
+  order: 2;
+}
+
+.sv-division__media {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: var(--sv-black-2);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.sv-division__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* 四帧来源与色调差异大：统一压成低饱和的档案影像，顺带让 HUD 退成纹理 */
+  filter: grayscale(0.66) contrast(1.08) brightness(0.86);
+  transition: transform 1.2s var(--sv-ease);
+}
+
+/* hover 只做极慢的轻微推近，不叠加变色/上浮 */
+.sv-division:hover .sv-division__media img {
+  transform: scale(1.035);
+}
+
+/* 图片未到位时的占位：编号水印 + 说明，不留空白方块 */
+.sv-division__ph {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  background:
+    radial-gradient(ellipse at 50% 120%, rgba(255, 198, 39, 0.11), transparent 62%),
+    var(--sv-black-2);
+}
+
+.sv-division__ph i {
+  font-family: var(--sv-font-num);
+  font-style: normal;
+  font-size: clamp(3.4rem, 7vw, 5.4rem);
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.09);
+}
+
+.sv-division__ph span {
+  font-size: 11.5px;
+  letter-spacing: 0.24em;
+  color: rgba(255, 255, 255, 0.24);
+}
+
+.sv-division__idx {
+  font-family: var(--sv-font-num);
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  color: var(--sv-gray-2);
+}
+
+.sv-division__name {
+  margin: 14px 0 0;
+  font-size: clamp(1.35rem, 2.6vw, 2rem);
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  color: var(--sv-white);
+}
+
+.sv-division__role {
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sv-gray-2);
+}
+
+.sv-division__text {
+  margin: 20px 0 0;
+  max-width: 34em;
+  font-size: 14.5px;
+  line-height: 2.1;
+  color: #b3afa3;
+}
+
+/* 关键公会名用黄色点出 */
+.sv-division__text em {
+  font-style: normal;
+  color: var(--sv-yellow);
+}
+
+/* ============================================================
+   4 · 那一战：居中巨大比分
+   ============================================================ */
+.sv-battle {
+  background: var(--sv-black);
+  padding: clamp(80px, 15vh, 176px) var(--sv-pad);
+  text-align: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.sv-battle__score {
+  font-family: var(--sv-font-num);
+  font-size: clamp(5rem, 19vw, 15rem);
+  line-height: 0.92;
+  letter-spacing: -0.01em;
+  color: var(--sv-yellow);
+  font-variant-numeric: tabular-nums;
+}
+
+.sv-battle__vs {
+  margin-top: clamp(20px, 3.4vh, 34px);
+  font-size: clamp(12.5px, 1.5vw, 15px);
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--sv-white);
+}
+
+.sv-battle__text {
+  margin: clamp(26px, 4vh, 40px) auto 0;
+  max-width: 40em;
+  font-size: 14.5px;
+  line-height: 2.15;
+  color: #a5a196;
+}
+
+/* ============================================================
+   5 · 宣传片：米白底影像网格
+   ============================================================ */
+.sv-films {
+  background: var(--sv-cream);
+  padding: clamp(72px, 13vh, 148px) var(--sv-pad);
+  color: var(--sv-ink);
+}
+
+.sv-films__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(20px, 3vw, 34px);
+}
+
+/* 首部横跨两列，作为视觉重点 */
+.sv-film:first-child {
+  grid-column: span 2;
+}
+
+.sv-film {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.sv-film__cover {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #ded9cc;
+}
+
+.sv-film:first-child .sv-film__cover {
+  aspect-ratio: 16 / 9;
+}
+
+.sv-film__cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* 封面自带红金/高饱和配色，压低饱和度以免与全站的克制色板打架 */
+  filter: saturate(0.6) contrast(1.04);
+  transition: transform 1.2s var(--sv-ease);
+}
+
+.sv-film__play {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(10, 10, 9, 0.66);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: var(--sv-white);
+  transition:
+    background 0.4s var(--sv-ease),
+    transform 0.5s var(--sv-ease);
+}
+
+.sv-film__play svg {
+  width: 13px;
+  height: 13px;
+  margin-left: 2px;
+}
+
+.sv-film:hover .sv-film__cover img {
+  transform: scale(1.045);
+}
+
+.sv-film:hover .sv-film__play {
+  background: var(--sv-yellow);
+  color: #17150f;
+  transform: scale(1.08);
+}
+
+.sv-film__meta {
+  margin-top: 16px;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.sv-film__year {
+  font-family: var(--sv-font-num);
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  color: #b58c0c;
+}
+
+.sv-film__title {
+  font-size: 15.5px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--sv-ink);
+  transition: color 0.3s var(--sv-ease);
+}
+
+.sv-film:hover .sv-film__title {
+  color: #8a6a06;
+}
+
+/* ============================================================
+   6 · 加入：三步流程
+   ============================================================ */
+.sv-join {
+  background: var(--sv-black);
+  padding: clamp(76px, 14vh, 158px) var(--sv-pad);
+}
+
+.sv-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(24px, 4vw, 56px);
+  margin-top: clamp(40px, 7vh, 74px);
+}
+
+.sv-step {
+  padding-top: 26px;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.sv-step__idx {
+  font-family: var(--sv-font-num);
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  color: var(--sv-gray-2);
+}
+
+.sv-step__name {
+  margin: 14px 0 0;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--sv-white);
+}
+
+.sv-step__text {
+  margin: 12px 0 0;
+  font-size: 13.5px;
+  line-height: 2;
+  color: #a5a196;
+}
+
+.sv-join__cta {
+  margin-top: clamp(44px, 7vh, 72px);
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  flex-wrap: wrap;
+}
+
+.sv-join__note {
+  font-size: 13px;
+  line-height: 1.9;
+  color: var(--sv-gray);
+}
+
+.sv-join__note b {
+  color: var(--sv-white);
+  font-weight: 600;
+}
+
+/* —— 页脚 —— */
+.sv-footer {
+  background: var(--sv-black);
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+  padding: 34px var(--sv-pad) 42px;
+}
+
+.sv-footer__inner {
+  max-width: 1180px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  letter-spacing: 0.04em;
+  color: var(--sv-gray-2);
+}
+
+.sv-footer__links {
+  display: flex;
+  gap: 18px;
+}
+
+.sv-footer__links a {
+  color: var(--sv-gray);
+  text-decoration: none;
+  transition: color 0.3s var(--sv-ease);
+}
+
+.sv-footer__links a:hover {
+  color: var(--sv-white);
+}
+
+/* ============================================================
+   响应式
+   ============================================================ */
+@media (max-width: 1000px) {
+  .sv-nav__links {
+    display: none;
+  }
+
+  .sv-stats {
+    grid-template-columns: repeat(3, 1fr);
+    row-gap: 32px;
+  }
+
+  .sv-films__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .sv-film:first-child {
+    grid-column: span 2;
+  }
+
+  .sv-steps {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .sv-step {
+    border-top: 0;
+    border-left: 1px solid rgba(255, 255, 255, 0.16);
+    padding: 0 0 30px 22px;
+  }
+
+  .sv-step:last-child {
+    padding-bottom: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .sv-hero__veil {
+    background:
+      linear-gradient(180deg, rgba(4, 4, 4, 0.7) 0%, rgba(4, 4, 4, 0.5) 30%, rgba(4, 4, 4, 0.94) 100%);
+  }
+
+  .sv-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .sv-division {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+
+  .sv-division--flip .sv-division__media {
+    order: 0;
+  }
+
+  .sv-films__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sv-film:first-child {
+    grid-column: span 1;
+  }
+
+  .sv-join__cta .sv-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sv-landing [data-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .sv-hero__bg img {
+    animation: none;
+  }
+}
