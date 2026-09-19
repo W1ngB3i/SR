@@ -57,9 +57,13 @@ test('主链路：生成接洽码 → 提交 → 接单 → 回执 → 公示 �
   await expect(admin.locator('.contact-key-code', { hasText: contactKey })).toBeVisible();
 
   // ---------------------------------------------------------------------------
-  // 2. 用户端：提交工单
+  // 2. 用户端：落地页 → 申请表单 → 提交工单（落地页在 /，表单在 /apply）
   // ---------------------------------------------------------------------------
   await page.goto('/');
+  await expect(page.getByRole('heading', { name: /在方块间打了六年/ })).toBeVisible();
+  await page.getByRole('link', { name: '申请加入 SR' }).click();
+  await expect(page).toHaveURL(/\/apply$/);
+
   await expect(page.getByRole('heading', { name: '提交审核申请' })).toBeVisible();
   // 规则 bundle 加载完成后表单才渲染（loading 态只有骨架屏）
   await expect(page.getByPlaceholder('游戏内使用的圈名')).toBeVisible();
