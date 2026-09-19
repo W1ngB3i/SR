@@ -8,6 +8,7 @@ import { AdminLayout } from './layout/AdminLayout';
 import { LoginPage } from './pages/LoginPage';
 import { PoolPage } from './pages/PoolPage';
 import { TicketDetailPage } from './pages/TicketDetailPage';
+import { ContactKeysPage } from './pages/ContactKeysPage';
 import { StatsPage } from './pages/StatsPage';
 import { RulesAdminPage } from './pages/RulesAdminPage';
 import { UsersPage } from './pages/UsersPage';
@@ -78,6 +79,14 @@ export function App() {
             element={
               <RequireRole allow={canReview}>
                 <TicketDetailPage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/keys"
+            element={
+              <RequireRole allow={canReview}>
+                <ContactKeysPage />
               </RequireRole>
             }
           />

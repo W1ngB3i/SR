@@ -4,7 +4,6 @@ import type { SystemConfigDTO } from '@sr/shared';
 import {
   fetchSystemConfig,
   putFeedbackContacts,
-  putIntentions,
   putReviewerMaxConcurrent,
   putSubmissionCooldown,
   putUploadLimits,
@@ -17,7 +16,6 @@ export function ConfigPage() {
   const [config, setConfig] = useState<SystemConfigDTO | null>(null);
   const [savingKey, setSavingKey] = useState<string | null>(null);
 
-  const [intentionsForm] = Form.useForm<{ intentions: string[] }>();
   const [contactsForm] = Form.useForm<{
     chief_name: string;
     chief_qq: string;
@@ -37,7 +35,6 @@ export function ConfigPage() {
     fetchSystemConfig()
       .then((cfg) => {
         setConfig(cfg);
-        intentionsForm.setFieldsValue({ intentions: cfg.intentions });
         contactsForm.setFieldsValue({
           chief_name: cfg.feedback_contacts.chief.name,
           chief_qq: cfg.feedback_contacts.chief.qq,
@@ -85,28 +82,6 @@ export function ConfigPage() {
         <h1 className="page-hero__title">系统配置</h1>
         <p className="page-hero__desc">平台级参数，修改即时生效并记入审计日志。</p>
       </div>
-
-      <section className="sr-glass detail-card config-card">
-        <h2 className="detail-card__title">审核意向</h2>
-        <p className="config-card__desc">申请人端「审核意向」下拉的可选项，回车确认新增。</p>
-        <Form form={intentionsForm} layout="vertical">
-          <Form.Item name="intentions" rules={[{ required: true, message: '至少保留一个意向' }]}>
-            <Select mode="tags" placeholder="输入后回车添加" open={false} tokenSeparators={['\n', ',']} />
-          </Form.Item>
-          <Button
-            type="primary"
-            loading={savingKey === 'intentions'}
-            onClick={() =>
-              void runSave('intentions', async () => {
-                const values = await intentionsForm.validateFields();
-                return putIntentions(values.intentions);
-              }, '审核意向已更新')
-            }
-          >
-            保存
-          </Button>
-        </Form>
-      </section>
 
       <section className="sr-glass detail-card config-card">
         <h2 className="detail-card__title">反馈渠道</h2>

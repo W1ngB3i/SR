@@ -5,6 +5,7 @@ import {
   ClusterOutlined,
   DashboardOutlined,
   FileSearchOutlined,
+  KeyOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -35,6 +36,7 @@ export function AdminLayout() {
     const role = user?.role as StaffRole | undefined;
     return [
       { path: '/pool', label: '工单池', icon: <ClusterOutlined />, allowed: canReview(role) },
+      { path: '/keys', label: '接洽码', icon: <KeyOutlined />, allowed: canReview(role) },
       { path: '/stats', label: '仪表盘', icon: <DashboardOutlined />, allowed: canPlatform(role) },
       { path: '/rules', label: '规则配置', icon: <AuditOutlined />, allowed: canManage(role) },
       { path: '/announcements', label: '公告管理', icon: <NotificationOutlined />, allowed: canManage(role) },

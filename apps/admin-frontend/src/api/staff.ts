@@ -1,6 +1,7 @@
 import {
   API,
   type AttachmentDTO,
+  type ContactKeyDTO,
   type LoginResultDTO,
   type Page,
   type ReceiptDTO,
@@ -26,7 +27,6 @@ export interface TicketListQuery {
   status?: string;
   department_id?: string;
   module?: string;
-  intention?: string;
   keyword?: string;
   mine?: '1';
   page: number;
@@ -99,7 +99,6 @@ export const updateTicketInfo = (
   patch: Partial<{
     circle_name: string;
     contact: string;
-    intention: string;
     department_id: string;
     mode_id: string;
     module: 'PE' | 'PC' | 'BOTH';
@@ -117,5 +116,16 @@ export const deleteTicket = (id: string) =>
 
 /** 证据直链（带签名 token，直接用于 img / video src） */
 export const attachmentStreamUrl = (a: AttachmentDTO): string => a.url;
+
+// ---------------------------------------------------------------------------
+// 接洽码（一次性）
+// ---------------------------------------------------------------------------
+
+/** 我生成的接洽码列表（最新在前） */
+export const fetchMyContactKeys = () => request<ContactKeyDTO[]>(API.contactKeys.list);
+
+/** 生成一个新接洽码 */
+export const generateContactKey = () =>
+  request<ContactKeyDTO>(API.contactKeys.list, { method: 'POST' });
 
 export type { ReceiptDTO };

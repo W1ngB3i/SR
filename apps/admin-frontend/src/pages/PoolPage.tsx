@@ -38,7 +38,6 @@ const TAB_DEFS: { key: TabKey; label: string }[] = [
 interface PoolFilters {
   department_id?: string;
   module?: string;
-  intention?: string;
   keyword?: string;
 }
 
@@ -69,7 +68,6 @@ export function PoolPage() {
         page_size: PAGE_SIZE,
         department_id: filters.department_id,
         module: filters.module,
-        intention: filters.intention,
         keyword: filters.keyword,
       };
       if (tab === 'pending') query.status = 'pending_claim';
@@ -199,11 +197,10 @@ export function PoolPage() {
         ),
       },
       {
-        title: '意向 / 部门',
+        title: '部门 / 模式',
         width: 220,
         render: (_, row) => (
           <div className="pool-dept">
-            <span className="pool-dept__intention">{row.intention}</span>
             <span className="pool-dept__name">
               {row.department_name} · {row.mode_group ? `${row.mode_group} / ` : ''}
               {row.mode_name}
@@ -281,10 +278,6 @@ export function PoolPage() {
     [isManager],
   );
 
-  const intentionOptions = useMemo(
-    () => (rules?.intentions ?? []).map((i) => ({ value: i, label: i })),
-    [rules],
-  );
   const departmentOptions = useMemo(
     () =>
       (rules?.departments ?? [])
@@ -309,17 +302,6 @@ export function PoolPage() {
           className="pool-filter__keyword"
           onSearch={(v) => {
             setFilters((f) => ({ ...f, keyword: v.trim() || undefined }));
-            setPage(1);
-          }}
-        />
-        <Select
-          allowClear
-          placeholder="审核意向"
-          className="pool-filter__select"
-          options={intentionOptions}
-          value={filters.intention}
-          onChange={(v) => {
-            setFilters((f) => ({ ...f, intention: v ?? undefined }));
             setPage(1);
           }}
         />

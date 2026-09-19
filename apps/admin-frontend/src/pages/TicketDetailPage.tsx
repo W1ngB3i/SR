@@ -63,7 +63,6 @@ interface ReceiptFormValues {
 interface InfoFormValues {
   circle_name: string;
   contact: string;
-  intention: string;
   department_id: string;
   mode_id: string;
   module: 'PE' | 'PC' | 'BOTH';
@@ -307,14 +306,13 @@ export function TicketDetailPage() {
       }
     }
     infoForm.setFieldsValue({
-      circle_name: detail.circle_name,
-      contact: detail.contact,
-      intention: detail.intention,
-      department_id: detail.department_id,
-      mode_id: detail.mode_id,
-      module: detail.module,
-      self_proof: detail.self_proof,
-    });
+    circle_name: detail.circle_name,
+    contact: detail.contact,
+    department_id: detail.department_id,
+    mode_id: detail.mode_id,
+    module: detail.module,
+    self_proof: detail.self_proof,
+  });
   };
 
   const submitInfo = async () => {
@@ -642,9 +640,8 @@ export function TicketDetailPage() {
               size="small"
               className="detail-info"
               items={[
-                { key: 'intention', label: '审核意向', children: detail.intention },
                 { key: 'module', label: '模块', children: MODULE_LABELS[detail.module] },
-                { key: 'contact', label: '联系方式', children: detail.contact },
+                { key: 'contact', label: '接洽码', children: detail.contact },
                 {
                   key: 'self',
                   label: '自带证明',
@@ -756,17 +753,10 @@ function InfoModalFields({
       </Form.Item>
       <Form.Item
         name="contact"
-        label="联系方式"
-        rules={[{ required: true, message: '请填写联系方式' }]}
+        label="接洽码"
+        rules={[{ required: true, message: '请填写接洽码' }]}
       >
-        <Input maxLength={64} />
-      </Form.Item>
-      <Form.Item
-        name="intention"
-        label="审核意向"
-        rules={[{ required: true, message: '请填写审核意向' }]}
-      >
-        <Input maxLength={40} />
+        <Input maxLength={6} style={{ textTransform: 'uppercase' }} />
       </Form.Item>
       <Form.Item name="department_id" label="所属部门" rules={[{ required: true }]}>
         <Select

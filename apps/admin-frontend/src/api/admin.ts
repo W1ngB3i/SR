@@ -138,12 +138,6 @@ export const fetchAuditLogs = (query: {
 
 export const fetchSystemConfig = () => request<SystemConfigDTO>(API.admin.config);
 
-export const putIntentions = (intentions: string[]) =>
-  request<{ ok: boolean }>(API.admin.configKey('intentions'), {
-    method: 'PUT',
-    body: JSON.stringify(intentions),
-  });
-
 export const putFeedbackContacts = (contacts: SystemConfigDTO['feedback_contacts']) =>
   request<{ ok: boolean }>(API.admin.configKey('feedback_contacts'), {
     method: 'PUT',
