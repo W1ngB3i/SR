@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS ticket (
   id               TEXT PRIMARY KEY,
   query_code       TEXT NOT NULL UNIQUE,
   circle_name      TEXT NOT NULL,
-  intention        TEXT NOT NULL,
+  intention        TEXT NOT NULL DEFAULT '',
   department_id    TEXT NOT NULL REFERENCES department(id),
   module           TEXT NOT NULL CHECK (module IN ('PE','PC','BOTH')),
   mode_id          TEXT NOT NULL REFERENCES mode(id),
@@ -138,3 +138,16 @@ CREATE TABLE IF NOT EXISTS config (
   updated_by TEXT NOT NULL DEFAULT '',
   updated_at TEXT NOT NULL
 );
+
+-- 接洽码（一次性）：审核员生成后线下交付申请人，提单时消耗
+CREATE TABLE IF NOT EXISTS contact_key (
+  id             TEXT PRIMARY KEY,
+  code           TEXT NOT NULL UNIQUE,
+  created_by     TEXT NOT NULL REFERENCES "user"(id),
+  created_at     TEXT NOT NULL,
+  status         TEXT NOT NULL DEFAULT 'unused' CHECK (status IN ('unused','used')),
+  used_ticket_id TEXT,
+  used_at        TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_key_created_by ON contact_key(created_by);
+CREATE INDEX IF NOT EXISTS idx_key_status ON contact_key(status);

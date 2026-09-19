@@ -9,3 +9,16 @@ export function useTempDataDir(): string {
   process.env.SR_STORAGE_DIR = path.join(dir, 'storage');
   return dir;
 }
+
+/** 最小 db 形状，避免 helpers 顶层引入 src 模块（会抢在 env 设置之前） */
+interface MinimalDb {
+  prepare: (sql: string) => { run: (...args: unknown[]) => unknown };
+}
+
+/** 预置一个未使用的一次性接洽码，返回该码（测试提单用） */
+export function insertContactKey(db: MinimalDb, code: string): string {
+  db.prepare(
+    `INSERT INTO contact_key (id, code, created_by, created_at, status) VALUES (?, ?, 'usr-xingchen', ?, 'unused')`,
+  ).run(`ckey_${code}`, code, new Date().toISOString());
+  return code;
+}

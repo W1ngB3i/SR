@@ -65,7 +65,6 @@ export function listDepartments(includeDisabled: boolean): DepartmentDTO[] {
 export function getRulesBundle(): RulesBundleDTO {
   return {
     departments: listDepartments(false),
-    intentions: getConfig('intentions'),
     feedback_contacts: getConfig('feedback_contacts'),
     device_notes: [...DEVICE_NOTES],
     grade_ladder: [...GRADES],

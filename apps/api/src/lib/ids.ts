@@ -18,6 +18,16 @@ export function genQueryCode(): string {
   return code;
 }
 
+/** 生成 6 位一次性接洽码：审核员生成后 QQ 面对面交付申请人 */
+export function genContactCode(): string {
+  const bytes = crypto.randomBytes(6);
+  let code = '';
+  for (const b of bytes) {
+    code += QUERY_CODE_ALPHABET[b % QUERY_CODE_ALPHABET.length];
+  }
+  return code;
+}
+
 /** 时间戳（ISO 8601，含毫秒） */
 export function nowIso(): string {
   return new Date().toISOString();

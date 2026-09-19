@@ -1,32 +1,35 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { useTempDataDir } from './helpers.js';
+import { insertContactKey, useTempDataDir } from './helpers.js';
 
 useTempDataDir();
 
 let seed: typeof import('../src/db/seed.js');
 let ticket: typeof import('../src/services/ticket.js');
 let config: typeof import('../src/services/config.js');
+let dbMod: typeof import('../src/db/index.js');
 
 beforeAll(async () => {
   seed = await import('../src/db/seed.js');
   ticket = await import('../src/services/ticket.js');
   config = await import('../src/services/config.js');
+  dbMod = await import('../src/db/index.js');
   seed.seedDatabase(true);
 });
 
 const xingchen = { id: 'usr-xingchen', name: '星辰' };
 const liuyun = { id: 'usr-liuyun', name: '流云' };
 
+let keySeq = 0;
 function createPending(name: string) {
+  keySeq += 1;
   return ticket.createTicket(
     {
       circle_name: name,
-      intention: 'SR_Party',
       department_id: 'dept-ec-intl',
       mode_id: 'mode-ec-dandao',
       module: 'PE',
       self_proof: false,
-      contact: 'QQ 88880001',
+      contact: insertContactKey(dbMod.getDb(), `CLM${String(keySeq).padStart(3, '0')}`),
     },
     [],
   );

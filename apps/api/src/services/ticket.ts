@@ -31,7 +31,6 @@ interface TicketRow {
   id: string;
   query_code: string;
   circle_name: string;
-  intention: string;
   department_id: string;
   module: DeviceModule;
   mode_id: string;
@@ -67,7 +66,6 @@ function toSummary(row: JoinedRow): TicketSummaryDTO {
   return {
     id: row.id,
     circle_name: row.circle_name,
-    intention: row.intention,
     department_id: row.department_id,
     department_name: row.department_name,
     module: row.module,
@@ -208,10 +206,22 @@ export function createTicket(
   const now = nowIso();
 
   db.transaction(() => {
+    // 一次性接洽码：原子消耗，失败即拒绝提交（防并发重复使用）
+    const consumed = db
+      .prepare(
+        `UPDATE contact_key SET status = 'used', used_ticket_id = ?, used_at = ?
+         WHERE code = ? AND status = 'unused'`,
+      )
+      .run(id, now, input.contact);
+    if (consumed.changes !== 1) {
+      throw ApiError.badRequest(BizCode.InvalidInput, '接洽码无效或已被使用，请向审核员重新索取', {
+        contact: ['接洽码无效或已被使用'],
+      });
+    }
     db.prepare(
-      `INSERT INTO ticket (id, query_code, circle_name, intention, department_id, module, mode_id, self_proof, contact, status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_claim', ?, ?)`,
-    ).run(id, queryCode, input.circle_name, input.intention, input.department_id, input.module, input.mode_id, input.self_proof ? 1 : 0, input.contact, now, now);
+      `INSERT INTO ticket (id, query_code, circle_name, department_id, module, mode_id, self_proof, contact, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending_claim', ?, ?)`,
+    ).run(id, queryCode, input.circle_name, input.department_id, input.module, input.mode_id, input.self_proof ? 1 : 0, input.contact, now, now);
     for (const file of files) saveAttachmentMeta(id, file);
     addEvent(id, 'submitted', { id: null, name: input.circle_name }, files.length > 0 ? `附带 ${files.length} 份证据` : '未上传自证材料');
     writeAudit({
@@ -219,7 +229,7 @@ export function createTicket(
       action: 'ticket.create',
       resource: 'ticket',
       targetId: id,
-      after: JSON.stringify({ intention: input.intention, department_id: input.department_id }),
+      after: JSON.stringify({ department_id: input.department_id }),
       detail: '提交工单',
     });
   })();
@@ -284,7 +294,6 @@ export interface TicketListFilters {
   department_id?: string;
   mode_id?: string;
   module?: string;
-  intention?: string;
   keyword?: string;
   mine?: boolean;
   page: number;
@@ -314,10 +323,6 @@ export function listTickets(
   if (filters.module) {
     where.push('t.module = ?');
     params.push(filters.module);
-  }
-  if (filters.intention) {
-    where.push('t.intention = ?');
-    params.push(filters.intention);
   }
   if (filters.keyword) {
     where.push('t.circle_name LIKE ?');
@@ -478,7 +483,7 @@ export function togglePin(id: string, actor: AuditActor & { id: string }): Ticke
 // 总管/副总管全权管理：修订工单信息 / 撤销公示 / 删除工单
 // ---------------------------------------------------------------------------
 
-/** 修订工单基础信息（圈名、联系方式、意向、部门/模式、模块、自证标记） */
+/** 修订工单基础信息（圈名、接洽码、部门/模式、模块、自证标记） */
 export function updateTicketInfo(
   id: string,
   patch: TicketInfoUpdateInput,
@@ -505,15 +510,13 @@ export function updateTicketInfo(
     if (patch.module !== undefined && patch.module !== row.module) changes.push(`模块 ${row.module} → ${patch.module}`);
     if (patch.department_id !== undefined && patch.department_id !== row.department_id) changes.push('所属部门');
     if (patch.mode_id !== undefined && patch.mode_id !== row.mode_id) changes.push('审核模式');
-    if (patch.intention !== undefined && patch.intention !== row.intention) changes.push(`意向 ${row.intention} → ${patch.intention}`);
-    if (patch.contact !== undefined && patch.contact !== row.contact) changes.push('联系方式');
+    if (patch.contact !== undefined && patch.contact !== row.contact) changes.push('接洽码');
     if (patch.self_proof !== undefined && patch.self_proof !== (row.self_proof === 1)) changes.push('自证标记');
 
     db.prepare(
       `UPDATE ticket SET
          circle_name = COALESCE(?, circle_name),
          contact = COALESCE(?, contact),
-         intention = COALESCE(?, intention),
          department_id = COALESCE(?, department_id),
          mode_id = COALESCE(?, mode_id),
          module = COALESCE(?, module),
@@ -523,7 +526,6 @@ export function updateTicketInfo(
     ).run(
       patch.circle_name ?? null,
       patch.contact ?? null,
-      patch.intention ?? null,
       patch.department_id ?? null,
       patch.mode_id ?? null,
       patch.module ?? null,
@@ -541,7 +543,6 @@ export function updateTicketInfo(
       before: JSON.stringify({
         circle_name: row.circle_name,
         contact: row.contact,
-        intention: row.intention,
         department_id: row.department_id,
         mode_id: row.mode_id,
         module: row.module,

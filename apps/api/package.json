@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "db:reset": "tsx src/db/cli.ts reset",
-    "db:seed": "tsx src/db/cli.ts seed --force"
+    "db:seed": "tsx src/db/cli.ts seed --force",
+    "db:sync-catalog": "tsx src/db/cli.ts sync-catalog"
   },
   "dependencies": {
     "@sr/shared": "workspace:*",

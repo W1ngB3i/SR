@@ -1,4 +1,4 @@
-﻿import { Router, type Request } from 'express';
+import { Router, type Request } from 'express';
 import {
   announcementSchema,
   appealHandleSchema,
@@ -144,12 +144,6 @@ adminRouter.get('/config', requireRoles(...PLATFORM_ROLES), (_req, res, next) =>
 const CONFIG_VALUE_VALIDATORS: {
   [K in ConfigKey]: (v: unknown) => ConfigMap[K] | null;
 } = {
-  intentions: (v) => {
-    if (Array.isArray(v) && v.length > 0 && v.every((x) => typeof x === 'string' && x.trim())) {
-      return v as string[];
-    }
-    return null;
-  },
   feedback_contacts: (v) => {
     const o = v as ConfigMap['feedback_contacts'];
     if (

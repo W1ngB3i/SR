@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { useTempDataDir } from './helpers.js';
+import { insertContactKey, useTempDataDir } from './helpers.js';
 
 useTempDataDir();
 
@@ -24,16 +24,17 @@ const xingchen = { id: 'usr-xingchen', name: '星辰', role: 'reviewer' as const
 const wangbei = { id: 'usr-wangbei', name: '望北', role: 'chief' as const };
 const yuye = { id: 'usr-yuye', name: '雨夜', role: 'deputy' as const };
 
+let keySeq = 0;
 function createPending(name: string) {
+  keySeq += 1;
   return ticket.createTicket(
     {
       circle_name: name,
-      intention: 'SR_Party',
       department_id: 'dept-ec-intl',
       mode_id: 'mode-ec-dandao',
       module: 'PE',
       self_proof: false,
-      contact: 'QQ 88880001',
+      contact: insertContactKey(db.getDb(), `MP${String(keySeq).padStart(4, '0')}`),
     },
     [],
   );
@@ -138,7 +139,7 @@ describe('总管/副总管全权：工单管理', () => {
     const t = createPending('信息修订');
     const detail = ticket.updateTicketInfo(
       t.ticket_id,
-      { circle_name: '信息修订改', contact: 'QQ 12345678', self_proof: true },
+      { circle_name: '信息修订改', contact: 'MP9Z8Y', self_proof: true },
       wangbei,
     );
     expect(detail.circle_name).toBe('信息修订改');

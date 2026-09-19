@@ -1,6 +1,5 @@
 import {
   DEFAULT_FEEDBACK_CONTACTS,
-  DEFAULT_INTENTIONS,
   type FeedbackContacts,
 } from '@sr/shared';
 import { getDb } from '../db/index.js';
@@ -15,7 +14,6 @@ export interface UploadLimits {
 }
 
 export interface ConfigMap {
-  intentions: string[];
   feedback_contacts: FeedbackContacts;
   submission_cooldown_hours: number;
   reviewer_max_concurrent: number;
@@ -23,7 +21,6 @@ export interface ConfigMap {
 }
 
 export const CONFIG_DEFAULTS: ConfigMap = {
-  intentions: [...DEFAULT_INTENTIONS],
   feedback_contacts: {
     chief: { ...DEFAULT_FEEDBACK_CONTACTS.chief },
     deputy: { ...DEFAULT_FEEDBACK_CONTACTS.deputy },
@@ -62,7 +59,6 @@ export function getConfig<K extends ConfigKey>(key: K): ConfigMap[K] {
 
 export function getAllConfig(): (ConfigMap & Record<string, unknown>) & { _meta?: unknown } {
   return {
-    intentions: getConfig('intentions'),
     feedback_contacts: getConfig('feedback_contacts'),
     submission_cooldown_hours: getConfig('submission_cooldown_hours'),
     reviewer_max_concurrent: getConfig('reviewer_max_concurrent'),
@@ -71,7 +67,6 @@ export function getAllConfig(): (ConfigMap & Record<string, unknown>) & { _meta?
 }
 
 const CONFIG_LABELS: Record<ConfigKey, string> = {
-  intentions: '审核意向选项',
   feedback_contacts: '反馈渠道',
   submission_cooldown_hours: '提交冷却期（小时）',
   reviewer_max_concurrent: '审核员同时处理上限',

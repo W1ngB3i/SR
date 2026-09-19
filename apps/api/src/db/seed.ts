@@ -1,63 +1,12 @@
-import {
-  DEFAULT_FEEDBACK_CONTACTS,
-  DEFAULT_INTENTIONS,
-  DEVICE_NOTES,
-} from '@sr/shared';
+import { DEFAULT_FEEDBACK_CONTACTS, DEVICE_NOTES } from '@sr/shared';
 import { getDb } from './index.js';
+import { CATALOG_DEPARTMENTS, CATALOG_MODES } from './catalog.js';
 import { newId, nowIso } from '../lib/ids.js';
 import { hashPassword } from '../lib/password.js';
 
 function hoursAgo(h: number): string {
   return new Date(Date.now() - h * 3_600_000).toISOString();
 }
-
-/** SR 公会 2023.12 起生效的部门难度与模式清单（初始配置口径） */
-const DEPARTMENTS = [
-  { id: 'dept-hq', name: '总部', tier: 'B+ Tier', contact: '', description: '单公会', sort: 1, enabled: 1 },
-  { id: 'dept-bj-java', name: 'SR_Team 布吉岛&JAVA 部门', tier: '政审', contact: '1104546892', description: '政审模式，请联系指定负责人', sort: 2, enabled: 1 },
-  { id: 'dept-jingdao', name: 'SR_Team 精刀小组', tier: 'B- Tier', contact: '', description: '', sort: 3, enabled: 1 },
-  { id: 'dept-ec-intl', name: 'SR_Party EC&国际部门', tier: 'C+ Tier', contact: '', description: '', sort: 4, enabled: 1 },
-  { id: 'dept-lobby', name: 'SR_Group 联机大厅部门', tier: 'C+ Tier', contact: '', description: '', sort: 5, enabled: 1 },
-  { id: 'dept-survival', name: 'SR_Arrow 生存部门', tier: 'B-', contact: '', description: '', sort: 6, enabled: 1 },
-  { id: 'dept-explore', name: 'SR_Explore 开拓部门', tier: '政审', contact: '323992228', description: '政审模式，请联系指定负责人', sort: 7, enabled: 1 },
-] as const;
-
-const MODES = [
-  // SR_Team 布吉岛&JAVA 部门
-  { id: 'mode-bj-bedfight', department_id: 'dept-bj-java', group_name: '布吉岛', name: 'Bedfight', min_requirement: '', sort: 1 },
-  { id: 'mode-bj-sword', department_id: 'dept-bj-java', group_name: '布吉岛', name: 'Single Sword', min_requirement: '', sort: 2 },
-  { id: 'mode-bj-buhc', department_id: 'dept-bj-java', group_name: '布吉岛', name: 'BUHC/FUHC', min_requirement: '', sort: 3 },
-  { id: 'mode-javalow-nodebuff', department_id: 'dept-bj-java', group_name: 'Java 低版本', name: 'NoDebuff', min_requirement: '', sort: 4 },
-  { id: 'mode-javalow-sumo', department_id: 'dept-bj-java', group_name: 'Java 低版本', name: 'Sumo', min_requirement: '', sort: 5 },
-  { id: 'mode-javalow-buhc', department_id: 'dept-bj-java', group_name: 'Java 低版本', name: 'Buhc', min_requirement: '', sort: 6 },
-  { id: 'mode-javalow-boxing', department_id: 'dept-bj-java', group_name: 'Java 低版本', name: 'Boxing', min_requirement: '', sort: 7 },
-  { id: 'mode-javalow-classic', department_id: 'dept-bj-java', group_name: 'Java 低版本', name: 'Classic', min_requirement: '', sort: 8 },
-  { id: 'mode-javalow-bedfight', department_id: 'dept-bj-java', group_name: 'Java 低版本', name: 'BedFight', min_requirement: '', sort: 9 },
-  { id: 'mode-javahi-sword', department_id: 'dept-bj-java', group_name: 'JAVA 高版本（1.9+）', name: 'Sword', min_requirement: '', sort: 10 },
-  { id: 'mode-javahi-crystals', department_id: 'dept-bj-java', group_name: 'JAVA 高版本（1.9+）', name: 'Crystals', min_requirement: '审核最低要求 ht4', sort: 11 },
-  // SR_Team 精刀小组（Misaki 模块）
-  { id: 'mode-misaki-nodebuff', department_id: 'dept-jingdao', group_name: 'Misaki', name: 'NoDebuff', min_requirement: '', sort: 1 },
-  { id: 'mode-misaki-boxing', department_id: 'dept-jingdao', group_name: 'Misaki', name: 'Boxing', min_requirement: '', sort: 2 },
-  { id: 'mode-misaki-fist', department_id: 'dept-jingdao', group_name: 'Misaki', name: 'Fist', min_requirement: '', sort: 3 },
-  { id: 'mode-misaki-classic', department_id: 'dept-jingdao', group_name: 'Misaki', name: 'Classic', min_requirement: '', sort: 4 },
-  { id: 'mode-misaki-gapple', department_id: 'dept-jingdao', group_name: 'Misaki', name: 'Gapple', min_requirement: '', sort: 5 },
-  // SR_Party EC&国际部门
-  { id: 'mode-ec-dandao', department_id: 'dept-ec-intl', group_name: 'EC', name: '单刀', min_requirement: '', sort: 1 },
-  { id: 'mode-ec-combo', department_id: 'dept-ec-intl', group_name: 'EC', name: '无限连击', min_requirement: '', sort: 2 },
-  { id: 'mode-ec-dawn', department_id: 'dept-ec-intl', group_name: 'EC', name: '决战黎明', min_requirement: '', sort: 3 },
-  { id: 'mode-ec-wall', department_id: 'dept-ec-intl', group_name: 'EC', name: '超级战墙决斗', min_requirement: '', sort: 4 },
-  { id: 'mode-beintl-pot', department_id: 'dept-ec-intl', group_name: 'BE 国际服', name: 'Pot', min_requirement: '', sort: 5 },
-  { id: 'mode-beintl-buhc', department_id: 'dept-ec-intl', group_name: 'BE 国际服', name: 'BUHC', min_requirement: '', sort: 6 },
-  { id: 'mode-beintl-fist', department_id: 'dept-ec-intl', group_name: 'BE 国际服', name: 'Fist', min_requirement: '', sort: 7 },
-  { id: 'mode-beintl-sumo', department_id: 'dept-ec-intl', group_name: 'BE 国际服', name: 'Sumo', min_requirement: '', sort: 8 },
-  { id: 'mode-beintl-classic', department_id: 'dept-ec-intl', group_name: 'BE 国际服', name: 'Classic', min_requirement: '', sort: 9 },
-  // SR_Group 联机大厅部门（联大逐梦起源）
-  { id: 'mode-lianda-ffa', department_id: 'dept-lobby', group_name: '联大逐梦起源', name: 'FFA', min_requirement: '', sort: 1 },
-  // 总部（其他模块）
-  { id: 'mode-etc-build', department_id: 'dept-hq', group_name: '其他模块', name: '建筑', min_requirement: '联系群主', sort: 1 },
-  { id: 'mode-etc-redstone', department_id: 'dept-hq', group_name: '其他模块', name: '红石', min_requirement: '联系群主', sort: 2 },
-  { id: 'mode-etc-command', department_id: 'dept-hq', group_name: '其他模块', name: '指令', min_requirement: '联系群主', sort: 3 },
-] as const;
 
 const USERS = [
   { id: 'usr-wangbei', username: 'wangbei', name: '望北', role: 'chief' },
@@ -71,7 +20,6 @@ const USERS = [
 interface DemoTicket {
   id: string;
   circle_name: string;
-  intention: string;
   department_id: string;
   module: 'PE' | 'PC' | 'BOTH';
   mode_id: string;
@@ -97,65 +45,65 @@ interface DemoTicket {
 
 const DEMO_TICKETS: DemoTicket[] = [
   {
-    id: 'tkt-shanyu', circle_name: '山栀', intention: 'SR_Party', department_id: 'dept-ec-intl',
-    module: 'PE', mode_id: 'mode-ec-dandao', self_proof: 1, contact: 'QQ 30001111',
+    id: 'tkt-shanyu', circle_name: '山栀', department_id: 'dept-ec-intl',
+    module: 'PE', mode_id: 'mode-ec-dandao', self_proof: 1, contact: 'AB2CDE',
     status: 'published', assignee_id: 'usr-liuyun', is_priority: 0,
     createdAtHoursAgo: 96, claimedHoursAgo: 90, resultedHoursAgo: 80, publishedHoursAgo: 72,
-    receipt: { pe_grade: 'S', pass: 1, target_department: 'SR_Party EC&国际部门', comment: '操作流畅，反应迅速，单刀连段稳定。' },
+    receipt: { pe_grade: 'S', pass: 1, target_department: 'EC', comment: '操作流畅，反应迅速，单刀连段稳定。' },
   },
   {
-    id: 'tkt-ache', circle_name: '阿澈', intention: 'SR_Nexus', department_id: 'dept-bj-java',
-    module: 'BOTH', mode_id: 'mode-javalow-nodebuff', self_proof: 1, contact: 'QQ 30002222',
+    id: 'tkt-ache', circle_name: '阿澈', department_id: 'dept-javalow',
+    module: 'BOTH', mode_id: 'mode-javalow-nodebuff', self_proof: 1, contact: 'CD3FGH',
     status: 'published', assignee_id: 'usr-xingchen', is_priority: 0,
     createdAtHoursAgo: 120, claimedHoursAgo: 116, resultedHoursAgo: 100, publishedHoursAgo: 90,
-    receipt: { pe_grade: 'A', pc_grade: 'B', pass: 1, target_department: '总部', comment: '双端发挥均衡，Java 低版本 NoDebuff 意识到位。' },
+    receipt: { pe_grade: 'A', pc_grade: 'B', pass: 1, target_department: 'Java低版本', comment: '双端发挥均衡，Java 低版本 NoDebuff 意识到位。' },
   },
   {
-    id: 'tkt-nanyu', circle_name: '南屿', intention: 'SR_Arrow', department_id: 'dept-bj-java',
-    module: 'PC', mode_id: 'mode-javahi-crystals', self_proof: 0, contact: 'QQ 30003333',
+    id: 'tkt-nanyu', circle_name: '南屿', department_id: 'dept-javahigh',
+    module: 'PC', mode_id: 'mode-javahi-crystals', self_proof: 0, contact: 'EF4JKM',
     status: 'published', assignee_id: 'usr-beian', is_priority: 0,
     createdAtHoursAgo: 144, claimedHoursAgo: 140, resultedHoursAgo: 130, publishedHoursAgo: 120,
     receipt: { pc_grade: 'C', pass: 0, comment: '晶体操作未达 ht4 最低要求，评价不通过，可择日重考。' },
   },
   {
-    id: 'tkt-wudao', circle_name: '雾岛晚风', intention: 'SR_Group', department_id: 'dept-lobby',
-    module: 'PC', mode_id: 'mode-lianda-ffa', self_proof: 0, contact: 'QQ 30004444',
+    id: 'tkt-wudao', circle_name: '雾岛晚风', department_id: 'dept-lobby',
+    module: 'PC', mode_id: 'mode-lianda-ffa', self_proof: 0, contact: 'GH5NPQ',
     status: 'resulted', assignee_id: 'usr-liuyun', is_priority: 0,
     createdAtHoursAgo: 30, claimedHoursAgo: 26, resultedHoursAgo: 2,
-    receipt: { pc_grade: 'B', pass: 1, target_department: 'SR_Group 联机大厅部门', comment: '混战意识良好，走位积极，符合大厅难度口径。', is_draft: 0 },
+    receipt: { pc_grade: 'B', pass: 1, target_department: '联大逐梦起源', comment: '混战意识良好，走位积极，符合大厅难度口径。', is_draft: 0 },
   },
   {
-    id: 'tkt-yuejian', circle_name: '月见白', intention: 'SR_Explorit', department_id: 'dept-bj-java',
-    module: 'PC', mode_id: 'mode-javahi-sword', self_proof: 1, contact: 'QQ 30005555',
+    id: 'tkt-yuejian', circle_name: '月见白', department_id: 'dept-javahigh',
+    module: 'PC', mode_id: 'mode-javahi-sword', self_proof: 1, contact: 'JK6RSV',
     status: 'reviewing', assignee_id: 'usr-xingchen', is_priority: 0,
     createdAtHoursAgo: 20, claimedHoursAgo: 8,
   },
   {
-    id: 'tkt-baiya', circle_name: '白鸦', intention: 'SR_Party', department_id: 'dept-ec-intl',
-    module: 'BOTH', mode_id: 'mode-beintl-pot', self_proof: 1, contact: 'QQ 30006666',
+    id: 'tkt-baiya', circle_name: '白鸦', department_id: 'dept-beintl',
+    module: 'BOTH', mode_id: 'mode-beintl-pot', self_proof: 1, contact: 'KM7TVY',
     status: 'reviewing', assignee_id: 'usr-liuyun', is_priority: 0,
     createdAtHoursAgo: 48, claimedHoursAgo: 40,
   },
   {
-    id: 'tkt-changfeng', circle_name: '长风', intention: 'SR_Nexus', department_id: 'dept-jingdao',
-    module: 'PE', mode_id: 'mode-misaki-boxing', self_proof: 0, contact: 'QQ 30007777',
+    id: 'tkt-changfeng', circle_name: '长风', department_id: 'dept-jingdao',
+    module: 'PE', mode_id: 'mode-misaki-boxing', self_proof: 0, contact: 'NP8WXA',
     status: 'supplementing', assignee_id: 'usr-xingchen', is_priority: 0,
     supplement_reason: '自证材料无法播放，请补充清晰的操作视频（建议 30 秒以上）。',
     createdAtHoursAgo: 60, claimedHoursAgo: 55,
   },
   {
-    id: 'tkt-xingye', circle_name: '星野凛', intention: 'SR_Party', department_id: 'dept-ec-intl',
-    module: 'PE', mode_id: 'mode-ec-combo', self_proof: 1, contact: 'QQ 30008888',
+    id: 'tkt-xingye', circle_name: '星野凛', department_id: 'dept-ec-intl',
+    module: 'PE', mode_id: 'mode-ec-combo', self_proof: 1, contact: 'PQ9YB2',
     status: 'pending_claim', assignee_id: null, is_priority: 0, createdAtHoursAgo: 3,
   },
   {
-    id: 'tkt-luochen', circle_name: '落尘', intention: 'SR_Group', department_id: 'dept-lobby',
-    module: 'PC', mode_id: 'mode-lianda-ffa', self_proof: 0, contact: 'QQ 30009999',
+    id: 'tkt-luochen', circle_name: '落尘', department_id: 'dept-lobby',
+    module: 'PC', mode_id: 'mode-lianda-ffa', self_proof: 0, contact: 'RS3CDE',
     status: 'pending_claim', assignee_id: null, is_priority: 1, createdAtHoursAgo: 8,
   },
   {
-    id: 'tkt-banxia', circle_name: '半夏', intention: 'SR_Arrow', department_id: 'dept-ec-intl',
-    module: 'PC', mode_id: 'mode-ec-wall', self_proof: 0, contact: 'QQ 30001212',
+    id: 'tkt-banxia', circle_name: '半夏', department_id: 'dept-ec-intl',
+    module: 'PC', mode_id: 'mode-ec-wall', self_proof: 0, contact: 'TV4FGH',
     status: 'pending_claim', assignee_id: null, is_priority: 0, createdAtHoursAgo: 13,
   },
 ];
@@ -201,24 +149,23 @@ export function seedDatabase(force: boolean): void {
 
     const deptInsert = db.prepare(
       `INSERT INTO department (id, name, tier, contact, description, sort, enabled)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, 1)`,
     );
-    for (const d of DEPARTMENTS) {
-      deptInsert.run(d.id, d.name, d.tier, d.contact, d.description, d.sort, d.enabled);
+    for (const d of CATALOG_DEPARTMENTS) {
+      deptInsert.run(d.id, d.name, d.tier, d.contact, d.description, d.sort);
     }
 
     const modeInsert = db.prepare(
       `INSERT INTO mode (id, department_id, group_name, name, min_requirement, sort)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, '', ?, ?, ?)`,
     );
-    for (const m of MODES) {
-      modeInsert.run(m.id, m.department_id, m.group_name, m.name, m.min_requirement, m.sort);
+    for (const m of CATALOG_MODES) {
+      modeInsert.run(m.id, m.department_id, m.name, m.min_requirement, m.sort);
     }
 
     const configInsert = db.prepare(
       `INSERT INTO config (key, value, version, updated_by, updated_at) VALUES (?, ?, 1, '系统初始化', ?)`,
     );
-    configInsert.run('intentions', JSON.stringify([...DEFAULT_INTENTIONS]), nowIso());
     configInsert.run(
       'feedback_contacts',
       JSON.stringify({
@@ -270,8 +217,8 @@ export function seedDatabase(force: boolean): void {
     );
 
     const ticketInsert = db.prepare(
-      `INSERT INTO ticket (id, query_code, circle_name, intention, department_id, module, mode_id, self_proof, contact, status, assignee_id, is_priority, supplement_reason, created_at, updated_at, claimed_at, resulted_at, published_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO ticket (id, query_code, circle_name, department_id, module, mode_id, self_proof, contact, status, assignee_id, is_priority, supplement_reason, created_at, updated_at, claimed_at, resulted_at, published_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
     const receiptInsert = db.prepare(
       `INSERT INTO receipt (ticket_id, is_draft, pe_grade, pc_grade, pass, target_department, auditor_id, comment, submitted_at)
@@ -298,7 +245,7 @@ export function seedDatabase(force: boolean): void {
       const published = t.publishedHoursAgo !== undefined ? hoursAgo(t.publishedHoursAgo) : null;
       const updated = published ?? resulted ?? (t.status === 'supplementing' ? hoursAgo(10) : claimed) ?? created;
       ticketInsert.run(
-        t.id, codeOf(), t.circle_name, t.intention, t.department_id, t.module, t.mode_id,
+        t.id, codeOf(), t.circle_name, t.department_id, t.module, t.mode_id,
         t.self_proof, t.contact, t.status, t.assignee_id, t.is_priority,
         t.supplement_reason ?? '', created, updated, claimed, resulted, published,
       );
@@ -329,6 +276,6 @@ export function seedDatabase(force: boolean): void {
   });
 
   seed();
-  console.log(`[seed] 完成：${USERS.length} 个账号、${DEPARTMENTS.length} 个部门、${MODES.length} 个模式、${DEMO_TICKETS.length} 条演示工单`);
+  console.log(`[seed] 完成：${USERS.length} 个账号、${CATALOG_DEPARTMENTS.length} 个部门、${CATALOG_MODES.length} 个模式、${DEMO_TICKETS.length} 条演示工单`);
   console.log('[seed] 演示账号口令统一为 sr123456（wangbei / yuye / xingchen / liuyun / beian / admin）');
 }

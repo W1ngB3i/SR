@@ -1,4 +1,4 @@
-﻿import { Router, type Request } from 'express';
+import { Router, type Request } from 'express';
 import {
   assignSchema,
   releaseSchema,
@@ -69,7 +69,6 @@ ticketRouter.get('/', requireRoles(...REVIEW_ROLES), (req, res, next) => {
           department_id: req.query.department_id ? String(req.query.department_id) : undefined,
           mode_id: req.query.mode_id ? String(req.query.mode_id) : undefined,
           module: req.query.module ? String(req.query.module) : undefined,
-          intention: req.query.intention ? String(req.query.intention) : undefined,
           keyword: req.query.keyword ? String(req.query.keyword).trim() : undefined,
           mine: req.query.mine === '1' || req.query.mine === 'true',
           page,
