@@ -10,6 +10,8 @@
 
 共享契约（DTO / 校验 / 枚举 / 路径）收敛在 `packages/shared`，双端前端与 API 均以其为准。
 
+> 部署教程见 [DEPLOYMENT.md](./DEPLOYMENT.md)（从零部署、初始化、升级与备份恢复）。
+
 ---
 
 ## 一、快速部署（生产）
@@ -25,7 +27,6 @@ pnpm -r build
 
 # 3. 初始化数据库并写入种子数据（演示部门 / 模式 / 账号）
 npx pnpm -C apps/api db:reset
-npx pnpm -C apps/api db:seed
 
 # 4. 启动 API（默认 8787；生产必须显式注入 JWT_SECRET）
 JWT_SECRET=$(openssl rand -base64 48) node apps/api/dist/server.js
@@ -117,7 +118,7 @@ API 侧用 `schema.safeParse` 做入参校验并将 zod issue 转为 `FIELD_REQU
 
 ### 3.3 数据模型（SQLite，`apps/api/src/db/schema.sql`）
 
-`user`（账号与角色）、`department` / `mode`（部门与审核模式，级联约束删除）、`ticket`（工单主体 + 查询码 + 冷却判定字段）、`ticket_event`（流转事件，时间线数据源）、`receipt`（回执：PE / PC 成绩、是否通过、去向部门、评语、草稿态）、`attachment`（证据：kind = image / video / other）、`appeal`（申诉：凭圈名 + 查询码提交，总管 / 副总管采纳或驳回）、`announcement`（公告，置顶与过期）、`audit_log`（后台操作审计，before / after JSON）、`config`（系统配置 K/V）。
+`user`（账号与角色）、`department` / `mode`（部门与审核模式，级联约束删除）、`ticket`（工单主体 + 查询码 + 冷却判定字段）、`ticket_event`（流转事件，时间线数据源）、`receipt`（回执：PE / PC 成绩、是否通过、去向部门、评语、草稿态）、`attachment`（证据：kind = image / video / other）、`appeal`（申诉：凭圈名 + 查询码提交，总管 / 副总管采纳或驳回）、`contact_key`（一次性接洽码：审核员生成、提单事务内原子消耗）、`announcement`（公告，置顶与过期）、`audit_log`（后台操作审计，before / after JSON）、`config`（系统配置 K/V）。
 
 ### 3.4 工单状态机
 
@@ -148,7 +149,7 @@ release：reviewing / supplementing ─▶ pending_claim
 | --- | --- | --- |
 | 代提交 / 修订任意工单回执 | deputy + chief | 不限负责人；`resulted` 工单修订不改变状态；已公示工单仅支持提交修订，公示数据即时更新 |
 | 退回任意审核中工单补充材料 | deputy + chief | 不限负责人 |
-| 修订工单基础信息 | deputy + chief | 圈名 / 联系方式 / 意向 / 部门模式 / 模块 / 自证，留 `ticket_updated` 事件 |
+| 修订工单基础信息 | deputy + chief | 圈名 / 接洽码 / 部门模式 / 模块 / 自证，留 `ticket_updated` 事件 |
 | 撤销公示 | deputy + chief | `published → resulted`，修订后可重新公示 |
 | 删除工单 | deputy + chief | 级联清理回执 / 事件 / 附件（含磁盘文件），不可恢复 |
 | 申诉处理（采纳 / 驳回） | deputy + chief | 管理后台「申诉处理」页 |
@@ -161,6 +162,7 @@ release：reviewing / supplementing ─▶ pending_claim
 - 申请人（无账号，频控 + 冷却）：`POST /tickets`（multipart：`ticket` 为 JSON 字符串、`files` 证据 ≤6）、`POST /tickets/:id/supplement`、`POST /tickets/:id/appeals`（凭圈名 + 查询码申诉）
 - 认证：`POST /auth/login`（JWT Bearer）
 - 工单（登录）：`GET /tickets`（tab=待接单/我的在办/全部 + 筛选）、`GET /tickets/assignables`、`GET /tickets/:id`、`POST /tickets/:id/{claim,assign,release,pin,supplement-request,review,publish}`、`PUT /tickets/:id/receipt`、`PUT /tickets/:id/info`（总管/副总管修订基础信息）、`POST /tickets/:id/unpublish`（撤销公示）、`DELETE /tickets/:id`（删除）
+- 接洽码（登录，审核系角色）：`GET /contact-keys`（我的生成记录）、`POST /contact-keys`（生成一次性接洽码，提单时原子消耗）
 - 管理：`/admin/departments|modes|users|announcements|appeals|audit-logs|stats|config` CRUD 与读
 
 ### 3.7 前端约定
@@ -174,12 +176,12 @@ release：reviewing / supplementing ─▶ pending_claim
 
 1. **不要用 `pnpm install --filter <pkg>`**：hoisted 模式下会剪掉其它包依赖并留下失效 `.bin` 垫片；装包一律全量 `pnpm install`。
 2. shared 改动未重建 dist 时，下游会报「无此导出」——先 `npx pnpm -C packages/shared build`。
-3. `db:reset` 会清空 `sr-review.db` 并重置为种子态（6 账号 / 7 部门 / 29 模式 / 10 演示工单）。
+3. `db:reset` 会清空 `sr-review.db` 并重置为种子态（6 账号 / 8 部门 / 31 模式 / 10 演示工单）。已有数据的库升级目录用 `db:sync-catalog`（幂等，不动账号与工单）。
 4. 上传限制（扩展名白名单、单文件 200MB、每单 6 个）与提交冷却在「系统配置」页可调，实时生效。
 
 ### 3.9 E2E 主链路测试（`e2e/`）
 
-Playwright 单条主链路用例：**提交工单 → 总管接单 → 填回执 → 复核公示 → 用户查询回执 → 公示墙脱敏校验**。
+Playwright 单条主链路用例：**生成接洽码 → 提交工单 → 总管接单 → 填回执 → 复核公示 → 用户查询回执 → 公示墙脱敏校验**。
 
 - **独立实例**：`e2e/scripts/serve.mjs` 负责在临时目录拉起全新 SQLite（自动种子）+ API（8788）+ 两个前端（5273 / 5274），与本地开发服务（8787 / 5173 / 5174）完全隔离，不触碰真实数据。
 - **端口可调**：环境变量 `SR_E2E_API_PORT` / `SR_E2E_USER_PORT` / `SR_E2E_ADMIN_PORT`；本地开发服务的端口/代理也可用 `SR_PORT` / `SR_API_TARGET` 注入。
