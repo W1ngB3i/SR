@@ -21,6 +21,9 @@ apps/api/storage/
 # 本地 Node 运行时（便携版）
 .node-test/
 
+# 本地工具（gh CLI 便携版）
+.tools/
+
 # 临时脚本
 .tmp-*.js
 .tmp-*.cjs
