@@ -5,6 +5,7 @@ import {
   receiptSchema,
   reviewSchema,
   supplementRequestSchema,
+  ticketInfoUpdateSchema,
   ticketStatusSchema,
   zodFieldErrors,
 } from '@sr/shared';
@@ -16,6 +17,7 @@ import { listAssignableUsers } from '../services/user.js';
 import {
   assignTicket,
   claimTicket,
+  deleteTicket,
   getTicketDetail,
   listTickets,
   publishTicket,
@@ -24,15 +26,17 @@ import {
   reviewTicket,
   saveReceipt,
   togglePin,
+  unpublishTicket,
+  updateTicketInfo,
 } from '../services/ticket.js';
 
 export const ticketRouter = Router();
 ticketRouter.use(authRequired);
 
-function actor(req: Request): { id: string; name: string } {
+function actor(req: Request): { id: string; name: string; role: 'reviewer' | 'deputy' | 'chief' | 'admin' } {
   const u = req.user;
   if (!u) throw ApiError.unauthorized();
-  return { id: u.id, name: u.name };
+  return { id: u.id, name: u.name, role: u.role };
 }
 
 function idParam(req: Request): string {
@@ -194,6 +198,34 @@ ticketRouter.post('/:id/review', requireRoles(...MANAGER_ROLES), (req, res, next
 ticketRouter.post('/:id/publish', requireRoles(...MANAGER_ROLES), (req, res, next) => {
   try {
     sendOk(res, publishTicket(idParam(req), actor(req)));
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** 修订工单基础信息（总管/副总管全权） */
+ticketRouter.put('/:id/info', requireRoles(...MANAGER_ROLES), (req, res, next) => {
+  try {
+    const parsed = ticketInfoUpdateSchema.parse(req.body ?? {});
+    sendOk(res, updateTicketInfo(idParam(req), parsed, actor(req)));
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** 撤销公示：已公示 → 已出结果（总管/副总管全权） */
+ticketRouter.post('/:id/unpublish', requireRoles(...MANAGER_ROLES), (req, res, next) => {
+  try {
+    sendOk(res, unpublishTicket(idParam(req), actor(req)));
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** 删除工单：级联清理回执、时间线与附件（总管/副总管全权，不可恢复） */
+ticketRouter.delete('/:id', requireRoles(...MANAGER_ROLES), (req, res, next) => {
+  try {
+    sendOk(res, deleteTicket(idParam(req), actor(req)));
   } catch (err) {
     next(err);
   }

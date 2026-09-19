@@ -21,6 +21,10 @@ export const DB_PATH = path.join(DATA_DIR, 'sr-review.db');
  */
 export const JWT_SECRET: string = (() => {
   if (process.env.JWT_SECRET) return process.env.JWT_SECRET;
+  // 生产环境必须显式注入密钥，避免密钥随数据目录漂移或被遗漏轮换
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('生产环境必须通过环境变量 JWT_SECRET 显式注入 JWT 密钥');
+  }
   const secretFile = path.join(DATA_DIR, 'jwt-secret');
   if (fs.existsSync(secretFile)) {
     const stored = fs.readFileSync(secretFile, 'utf8').trim();

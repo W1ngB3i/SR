@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import {
+  appealCreateSchema,
   lookupSchema,
   submitTicketSchema,
   supplementSchema,
@@ -8,6 +9,7 @@ import {
 import { sendOk } from '../middleware/errorHandler.js';
 import { rateLimit } from '../middleware/rateLimit.js';
 import { ApiError } from '../lib/errors.js';
+import { createAppeal } from '../services/appeal.js';
 import { listPublicAnnouncements } from '../services/announcement.js';
 import { getRulesBundle } from '../services/rule.js';
 import {
@@ -110,6 +112,21 @@ applicantRouter.post(
     });
   },
 );
+
+/** 申请人申诉：凭圈名 + 查询码校验身份，落库为工单子记录 */
+applicantRouter.post('/tickets/:id/appeals', rateLimit({ windowMs: 3_600_000, max: 6 }), (req, res, next) => {
+  try {
+    const id = req.params['id'];
+    if (!id) throw ApiError.badRequest('FIELD_REQUIRED', '缺少工单 ID');
+    const parsed = appealCreateSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      throw ApiError.badRequest('FIELD_REQUIRED', '申诉字段校验失败', zodFieldErrors(parsed.error));
+    }
+    sendOk(res, createAppeal(id, parsed.data, { reason: parsed.data.reason, contact: parsed.data.contact }), 201);
+  } catch (err) {
+    next(err);
+  }
+});
 
 /** 申请人补充材料：multipart（identity 为 JSON，files 为补充材料） */
 applicantRouter.post('/tickets/:id/supplement', (req, res, next) => {

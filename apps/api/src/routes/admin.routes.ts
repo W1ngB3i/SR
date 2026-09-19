@@ -1,6 +1,7 @@
 ﻿import { Router, type Request } from 'express';
 import {
   announcementSchema,
+  appealHandleSchema,
   departmentSchema,
   modeSchema,
   userCreateSchema,
@@ -11,6 +12,7 @@ import {
 import { authRequired, requireRoles, MANAGER_ROLES, PLATFORM_ROLES } from '../middleware/auth.js';
 import { sendOk } from '../middleware/errorHandler.js';
 import { ApiError } from '../lib/errors.js';
+import { handleAppeal, listAppeals } from '../services/appeal.js';
 import {
   createAnnouncement,
   deleteAnnouncement,
@@ -305,6 +307,31 @@ adminRouter.delete('/announcements/:id', requireRoles(...MANAGER_ROLES), (req, r
   try {
     deleteAnnouncement(idParam(req), actor(req));
     sendOk(res, { ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// 申诉处理（总管/副总管）
+// ---------------------------------------------------------------------------
+
+adminRouter.get('/appeals', requireRoles(...MANAGER_ROLES), (req, res, next) => {
+  try {
+    const page = Math.max(1, Number(req.query.page ?? 1) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(req.query.page_size ?? 20) || 20));
+    sendOk(res, listAppeals({ status: req.query.status ? String(req.query.status) : undefined, page, pageSize }));
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminRouter.put('/appeals/:id', requireRoles(...MANAGER_ROLES), (req, res, next) => {
+  try {
+    const parsed = appealHandleSchema.parse(req.body ?? {});
+    const u = req.user;
+    if (!u) throw ApiError.unauthorized();
+    sendOk(res, handleAppeal(idParam(req), parsed.action, parsed.note, { id: u.id, name: u.name, role: u.role }));
   } catch (err) {
     next(err);
   }

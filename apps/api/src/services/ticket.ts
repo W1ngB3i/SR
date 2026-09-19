@@ -9,6 +9,7 @@ import {
   type TicketEventDTO,
   type TicketSummaryDTO,
   type SubmitTicketInput,
+  type TicketInfoUpdateInput,
   desensitizeName,
   hoursBetween,
   type Grade,
@@ -18,12 +19,13 @@ import {
   type StaffRole,
 } from '@sr/shared';
 import type { Express } from 'express';
+import fs from 'node:fs';
 import { getDb } from '../db/index.js';
 import { ApiError } from '../lib/errors.js';
 import { genQueryCode, newId, nowIso } from '../lib/ids.js';
 import { writeAudit, type AuditActor } from './audit.js';
 import { getConfig } from './config.js';
-import { attachmentsForTicket, cleanupFiles, saveAttachmentMeta } from './storage.js';
+import { attachmentPhysicalPath, attachmentsForTicket, cleanupFiles, saveAttachmentMeta } from './storage.js';
 
 interface TicketRow {
   id: string;
@@ -472,13 +474,161 @@ export function togglePin(id: string, actor: AuditActor & { id: string }): Ticke
   return toSummary(getJoinedRow(id)!);
 }
 
-/** 审核员退回补充材料 */
-export function requestSupplement(id: string, reason: string, actor: AuditActor & { id: string }): TicketSummaryDTO {
+// ---------------------------------------------------------------------------
+// 总管/副总管全权管理：修订工单信息 / 撤销公示 / 删除工单
+// ---------------------------------------------------------------------------
+
+/** 修订工单基础信息（圈名、联系方式、意向、部门/模式、模块、自证标记） */
+export function updateTicketInfo(
+  id: string,
+  patch: TicketInfoUpdateInput,
+  actor: StaffActor,
+): TicketDetailDTO {
+  const db = getDb();
+  return db.transaction((): TicketDetailDTO => {
+    const row = getJoinedRow(id);
+    if (!row) throw ApiError.notFound(BizCode.TicketNotFound, '工单不存在');
+
+    const nextDept = patch.department_id ?? row.department_id;
+    const dept = db.prepare('SELECT id FROM department WHERE id = ?').get(nextDept);
+    if (!dept) {
+      throw ApiError.badRequest(BizCode.InvalidInput, '目标部门不存在', { department_id: ['请重新选择部门'] });
+    }
+    const nextMode = patch.mode_id ?? row.mode_id;
+    const mode = db.prepare('SELECT id FROM mode WHERE id = ? AND department_id = ?').get(nextMode, nextDept);
+    if (!mode) {
+      throw ApiError.badRequest(BizCode.InvalidInput, '审核模式与部门不匹配', { mode_id: ['请重新选择模式'] });
+    }
+
+    const changes: string[] = [];
+    if (patch.circle_name !== undefined && patch.circle_name !== row.circle_name) changes.push(`圈名 ${row.circle_name} → ${patch.circle_name}`);
+    if (patch.module !== undefined && patch.module !== row.module) changes.push(`模块 ${row.module} → ${patch.module}`);
+    if (patch.department_id !== undefined && patch.department_id !== row.department_id) changes.push('所属部门');
+    if (patch.mode_id !== undefined && patch.mode_id !== row.mode_id) changes.push('审核模式');
+    if (patch.intention !== undefined && patch.intention !== row.intention) changes.push(`意向 ${row.intention} → ${patch.intention}`);
+    if (patch.contact !== undefined && patch.contact !== row.contact) changes.push('联系方式');
+    if (patch.self_proof !== undefined && patch.self_proof !== (row.self_proof === 1)) changes.push('自证标记');
+
+    db.prepare(
+      `UPDATE ticket SET
+         circle_name = COALESCE(?, circle_name),
+         contact = COALESCE(?, contact),
+         intention = COALESCE(?, intention),
+         department_id = COALESCE(?, department_id),
+         mode_id = COALESCE(?, mode_id),
+         module = COALESCE(?, module),
+         self_proof = COALESCE(?, self_proof),
+         updated_at = ?
+       WHERE id = ?`,
+    ).run(
+      patch.circle_name ?? null,
+      patch.contact ?? null,
+      patch.intention ?? null,
+      patch.department_id ?? null,
+      patch.mode_id ?? null,
+      patch.module ?? null,
+      patch.self_proof === undefined ? null : patch.self_proof ? 1 : 0,
+      nowIso(),
+      id,
+    );
+
+    addEvent(id, 'ticket_updated', actor, changes.length ? `修订工单信息：${changes.join('、')}` : '修订工单信息（内容未变化）');
+    writeAudit({
+      operator: actor,
+      action: 'ticket.update_info',
+      resource: 'ticket',
+      targetId: id,
+      before: JSON.stringify({
+        circle_name: row.circle_name,
+        contact: row.contact,
+        intention: row.intention,
+        department_id: row.department_id,
+        mode_id: row.mode_id,
+        module: row.module,
+        self_proof: row.self_proof === 1,
+      }),
+      after: JSON.stringify(patch),
+      detail: `修订工单信息：${row.circle_name}`,
+    });
+    return getTicketDetail(id, actor);
+  })();
+}
+
+/** 撤销公示：已公示 → 已出结果，可修订回执后重新公示 */
+export function unpublishTicket(id: string, actor: StaffActor): TicketSummaryDTO {
   const db = getDb();
   return db.transaction((): TicketSummaryDTO => {
     const row = getJoinedRow(id);
     if (!row) throw ApiError.notFound(BizCode.TicketNotFound, '工单不存在');
-    if (row.assignee_id !== actor.id) {
+    if (row.status !== 'published') {
+      throw ApiError.conflict(BizCode.InvalidTransition, '仅已公示的工单可以撤销公示');
+    }
+    const now = nowIso();
+    db.prepare(
+      `UPDATE ticket SET status = 'resulted', published_at = NULL, updated_at = ? WHERE id = ? AND status = 'published'`,
+    ).run(now, id);
+    addEvent(id, 'unpublished', actor, '撤销公示，工单回到「已出结果」');
+    writeAudit({
+      operator: actor,
+      action: 'ticket.unpublish',
+      resource: 'ticket',
+      targetId: id,
+      detail: `撤销公示：${row.circle_name}`,
+    });
+    return toSummary(getJoinedRow(id)!);
+  })();
+}
+
+/** 删除工单：级联清理回执、时间线、附件记录与磁盘文件（不可恢复，仅总管/副总管） */
+export function deleteTicket(id: string, actor: StaffActor): { ok: true } {
+  const db = getDb();
+  return db.transaction(() => {
+    const row = getJoinedRow(id);
+    if (!row) throw ApiError.notFound(BizCode.TicketNotFound, '工单不存在');
+
+    const files = db.prepare('SELECT id FROM attachment WHERE ticket_id = ?').all(id) as Array<{ id: string }>;
+    db.prepare('DELETE FROM appeal WHERE ticket_id = ?').run(id);
+    db.prepare('DELETE FROM receipt WHERE ticket_id = ?').run(id);
+    db.prepare('DELETE FROM ticket_event WHERE ticket_id = ?').run(id);
+    db.prepare('DELETE FROM attachment WHERE ticket_id = ?').run(id);
+    db.prepare('DELETE FROM ticket WHERE id = ?').run(id);
+
+    for (const f of files) {
+      const p = attachmentPhysicalPath(f.id);
+      if (p) {
+        try {
+          fs.unlinkSync(p);
+        } catch {
+          /* 磁盘文件缺失时忽略 */
+        }
+      }
+    }
+
+    writeAudit({
+      operator: actor,
+      action: 'ticket.delete',
+      resource: 'ticket',
+      targetId: id,
+      before: JSON.stringify({
+        circle_name: row.circle_name,
+        status: row.status,
+        department_name: row.department_name,
+        mode_name: row.mode_name,
+        assignee_name: row.assignee_name,
+      }),
+      detail: `删除工单：${row.circle_name}（${row.department_name}）`,
+    });
+    return { ok: true as const };
+  })();
+}
+
+/** 退回补充材料：负责审核员操作；总管/副总管拥有全权，可退回任意审核中工单 */
+export function requestSupplement(id: string, reason: string, actor: StaffActor): TicketSummaryDTO {
+  const db = getDb();
+  return db.transaction((): TicketSummaryDTO => {
+    const row = getJoinedRow(id);
+    if (!row) throw ApiError.notFound(BizCode.TicketNotFound, '工单不存在');
+    if (row.assignee_id !== actor.id && !isManagerRole(actor.role)) {
       throw ApiError.forbidden('只能操作自己负责的工单');
     }
     assertTransition(row.status, 'supplementing');
@@ -510,23 +660,43 @@ export interface ReceiptInputService {
   submit: boolean;
 }
 
+export interface StaffActor extends AuditActor {
+  id: string;
+  role: StaffRole;
+}
+
+function isManagerRole(role: StaffRole): boolean {
+  return role === 'chief' || role === 'deputy';
+}
+
 /** 保存草稿 / 提交回执；提交时按工单模块校验成绩完整性 */
-export function saveReceipt(id: string, input: ReceiptInputService, actor: AuditActor & { id: string }): TicketDetailDTO {
+export function saveReceipt(id: string, input: ReceiptInputService, actor: StaffActor): TicketDetailDTO {
   const db = getDb();
   return db.transaction((): TicketDetailDTO => {
     const row = getJoinedRow(id);
     if (!row) throw ApiError.notFound(BizCode.TicketNotFound, '工单不存在');
-    if (row.assignee_id !== actor.id) {
+    const isMgr = isManagerRole(actor.role);
+    // 审核员只能填自己负责的工单；总管/副总管拥有全权，可修订任意工单的回执
+    if (row.assignee_id !== actor.id && !isMgr) {
       throw ApiError.forbidden('只能填写自己负责工单的回执');
     }
-    if (row.status !== 'reviewing' && row.status !== 'resulted') {
+    if (row.status === 'published') {
+      // 已公示工单：仅总管/副总管可直接修订，状态保持不变（修订后公示数据即时更新）
+      if (!isMgr) throw ApiError.forbidden('已公示工单仅总管/副总管可修订回执');
+      if (!input.submit) throw ApiError.conflict(BizCode.InvalidTransition, '已公示工单仅支持修订提交，不支持草稿');
+    } else if (row.status !== 'reviewing' && row.status !== 'resulted') {
       throw ApiError.conflict(BizCode.InvalidTransition, '当前状态不能填写回执');
     }
-    // 复核退回后重填：先将工单拉回审核中
-    if (row.status === 'resulted') {
+    // 审核员在复核退回后重填：先将工单拉回审核中；总管修订已出结果工单时保持状态不动
+    if (row.status === 'resulted' && !isMgr) {
       assertTransition(row.status, 'reviewing');
       db.prepare(`UPDATE ticket SET status = 'reviewing', resulted_at = NULL, updated_at = ? WHERE id = ?`).run(nowIso(), id);
     }
+
+    const prior = db.prepare('SELECT is_draft FROM receipt WHERE ticket_id = ?').get(id) as
+      | { is_draft: 0 | 1 }
+      | undefined;
+    const hadSubmitted = !!prior && prior.is_draft === 0;
 
     const details: Record<string, string[]> = {};
     if (input.submit) {
@@ -574,12 +744,20 @@ export function saveReceipt(id: string, input: ReceiptInputService, actor: Audit
     );
 
     if (input.submit) {
-      db.prepare(`UPDATE ticket SET status = 'resulted', resulted_at = ?, updated_at = ? WHERE id = ?`).run(now, now, id);
+      if (row.status !== 'published') {
+        db.prepare(`UPDATE ticket SET status = 'resulted', resulted_at = ?, updated_at = ? WHERE id = ?`).run(now, now, id);
+      } else {
+        db.prepare(`UPDATE ticket SET updated_at = ? WHERE id = ?`).run(now, id);
+      }
       addEvent(
         id,
-        'receipt_submitted',
+        hadSubmitted ? 'receipt_revised' : 'receipt_submitted',
         actor,
-        input.pass ? `评价：通过${input.target_department ? `，可进入 ${input.target_department}` : ''}` : '评价：不通过',
+        hadSubmitted
+          ? `由 ${actor.name} 修订回执`
+          : input.pass
+            ? `评价：通过${input.target_department ? `，可进入 ${input.target_department}` : ''}`
+            : '评价：不通过',
       );
       writeAudit({
         operator: actor,
@@ -592,10 +770,10 @@ export function saveReceipt(id: string, input: ReceiptInputService, actor: Audit
           pass: input.pass ?? null,
           target_department: input.target_department,
         }),
-        detail: `提交回执：${row.circle_name}`,
+        detail: `${hadSubmitted ? '修订回执' : '提交回执'}：${row.circle_name}${hadSubmitted ? `（操作者：${actor.name}）` : ''}`,
       });
     }
-    return getTicketDetail(id, { id: actor.id, role: 'chief' });
+    return getTicketDetail(id, { id: actor.id, role: actor.role });
   })();
 }
 

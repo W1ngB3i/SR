@@ -157,6 +157,20 @@ CREATE TABLE IF NOT EXISTS audit_log (
 );
 CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_log(created_at);
 
+CREATE TABLE IF NOT EXISTS appeal (
+  id             TEXT PRIMARY KEY,
+  ticket_id      TEXT NOT NULL REFERENCES ticket(id),
+  reason         TEXT NOT NULL,
+  contact        TEXT NOT NULL DEFAULT '',
+  status         TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','resolved','dismissed')),
+  handle_note    TEXT NOT NULL DEFAULT '',
+  handled_by     TEXT,
+  handled_at     TEXT,
+  created_at     TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_appeal_ticket ON appeal(ticket_id);
+CREATE INDEX IF NOT EXISTS idx_appeal_status ON appeal(status);
+
 CREATE TABLE IF NOT EXISTS config (
   key        TEXT PRIMARY KEY,
   value      TEXT NOT NULL,
