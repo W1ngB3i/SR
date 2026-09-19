@@ -1,0 +1,31 @@
+{
+  "name": "@sr/user-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "SR 公会审核工单系统 - 申请人端（提交 / 进度查询 / 公示）",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit -p tsconfig.json && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^6.0.0",
+    "@sr/shared": "workspace:*",
+    "@sr/ui": "workspace:*",
+    "antd": "^6.0.0",
+    "dayjs": "^1.11.13",
+    "gsap": "^3.13.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.6.3",
+    "vite": "^6.0.3"
+  }
+}
