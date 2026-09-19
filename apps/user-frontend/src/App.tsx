@@ -13,7 +13,7 @@ export function App() {
         <header className="app-header">
           <div className="app-header__inner">
             <Link to="/" className="app-logo">
-              <span className="app-logo__mark">SR</span>
+              <img src="/logo.png" alt="SR" className="app-logo__mark-img" />
               <span className="app-logo__text">公会审核工单</span>
             </Link>
             <nav className="app-nav">

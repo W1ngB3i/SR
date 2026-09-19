@@ -31,16 +31,17 @@
 
 .app-logo {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
   text-decoration: none;
 }
 
-.app-logo__mark {
-  font-weight: 800;
-  font-size: 21px;
-  letter-spacing: 0.05em;
-  color: var(--sr-text-hi);
+.app-logo__mark-img {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  filter: invert(1) brightness(1.1);
 }
 
 .app-logo__text {

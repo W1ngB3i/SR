@@ -54,7 +54,7 @@ export function AdminLayout() {
     <div className={`admin-shell ${collapsed ? 'is-collapsed' : ''}`}>
       <aside className="admin-sider sr-glass">
         <div className="admin-sider__brand" onClick={() => navigate('/')} role="button" tabIndex={0}>
-          <span className="admin-sider__mark">SR</span>
+          <img src="/logo.png" alt="SR" className="admin-sider__mark-img" />
           {!collapsed && <span className="admin-sider__name">审核工作台</span>}
         </div>
 

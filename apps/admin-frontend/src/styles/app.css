@@ -37,19 +37,17 @@
   user-select: none;
 }
 
-.admin-sider__mark {
+.admin-sider__mark-img {
   flex: none;
   width: 34px;
   height: 34px;
-  display: grid;
-  place-items: center;
+  padding: 5px;
+  box-sizing: border-box;
+  object-fit: contain;
   border-radius: 10px;
-  font-weight: 800;
-  font-size: 14px;
-  letter-spacing: 0.04em;
-  color: var(--sr-text-hi);
   background: linear-gradient(160deg, rgba(114, 219, 235, 0.16), rgba(109, 149, 255, 0.1));
   border: 1px solid rgba(114, 219, 235, 0.28);
+  filter: invert(1) brightness(1.1);
 }
 
 .admin-sider__name {
