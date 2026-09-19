@@ -12,6 +12,13 @@ export const ticketStatusSchema = z.enum([
   'published',
 ]);
 
+/** 接洽码：6 位无歧义大写字母数字，审核员在后台生成后线下（QQ 面对面）交付申请人 */
+export const contactKeySchema = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .regex(/^[A-Z2-9]{6}$/, '接洽码为 6 位大写字母或数字，请向审核员索取');
+
 /** 提交工单（multipart 字段解析后的对象） */
 export const submitTicketSchema = z.object({
   circle_name: z
@@ -19,16 +26,11 @@ export const submitTicketSchema = z.object({
     .trim()
     .min(1, '请填写圈名')
     .max(24, '圈名不超过 24 个字符'),
-  intention: z.string().trim().min(1, '请选择审核意向').max(40),
   department_id: z.string().min(1, '请选择审核部门'),
   mode_id: z.string().min(1, '请选择审核模式'),
   module: deviceModuleSchema,
   self_proof: z.boolean(),
-  contact: z
-    .string()
-    .trim()
-    .min(4, '请填写有效的联系方式')
-    .max(64, '联系方式不超过 64 个字符'),
+  contact: contactKeySchema,
 });
 export type SubmitTicketInput = z.infer<typeof submitTicketSchema>;
 
@@ -134,8 +136,7 @@ export const passwordResetSchema = z.object({
 export const ticketInfoUpdateSchema = z
   .object({
     circle_name: z.string().trim().min(1, '圈名不能为空').max(24, '圈名不超过 24 个字符').optional(),
-    contact: z.string().trim().min(4, '联系方式至少 4 个字符').max(64).optional(),
-    intention: z.string().trim().min(1, '审核意向不能为空').max(40).optional(),
+    contact: contactKeySchema.optional(),
     department_id: z.string().min(1).optional(),
     mode_id: z.string().min(1).optional(),
     module: deviceModuleSchema.optional(),

@@ -35,6 +35,10 @@ export const API = {
     rules: `${API_PREFIX}/public/rules`,
     announcements: `${API_PREFIX}/public/announcements`,
   },
+  contactKeys: {
+    /** GET 我生成的接洽码列表；POST 生成一个新接洽码 */
+    list: `${API_PREFIX}/contact-keys`,
+  },
   admin: {
     departments: `${API_PREFIX}/admin/departments`,
     department: (id: string) => `${API_PREFIX}/admin/departments/${id}`,

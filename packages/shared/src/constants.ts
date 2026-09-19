@@ -1,4 +1,4 @@
-﻿import type { AppealStatus, DeviceModule, Grade, StaffRole, TicketEventType, TicketStatus } from './enums.js';
+import type { AppealStatus, DeviceModule, Grade, StaffRole, TicketEventType, TicketStatus } from './enums.js';
 
 export const STATUS_LABELS: Record<TicketStatus, string> = {
   draft: '草稿',
@@ -53,15 +53,6 @@ export const GRADE_LABELS: Record<Grade, string> = {
   S: 'S',
   'S+': 'S+',
 };
-
-/** 默认审核意向（以规则配置中心的数据为准，此处仅作兜底） */
-export const DEFAULT_INTENTIONS = [
-  'SR_Group',
-  'SR_Nexus',
-  'SR_Arrow',
-  'SR_Explorit',
-  'SR_Party',
-] as const;
 
 /** 设备界定（源自公会 2023.12.13 群公告口径） */
 export const DEVICE_NOTES = [

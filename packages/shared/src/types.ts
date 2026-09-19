@@ -83,7 +83,6 @@ export interface AttachmentDTO {
 export interface TicketSummaryDTO {
   id: string;
   circle_name: string;
-  intention: string;
   department_id: string;
   department_name: string;
   module: DeviceModule;
@@ -177,7 +176,6 @@ export interface UploadLimitsDTO {
 
 /** 系统配置（规则配置中心 - 平台项） */
 export interface SystemConfigDTO {
-  intentions: string[];
   feedback_contacts: FeedbackContacts;
   submission_cooldown_hours: number;
   reviewer_max_concurrent: number;
@@ -187,10 +185,21 @@ export interface SystemConfigDTO {
 /** 规则配置中心的对外只读快照：驱动申请表单与规则页 */
 export interface RulesBundleDTO {
   departments: DepartmentDTO[];
-  intentions: string[];
   feedback_contacts: FeedbackContacts;
   device_notes: string[];
   grade_ladder: string[];
+}
+
+/** 接洽码（一次性）：审核员生成后线下交付申请人，提单时消耗 */
+export interface ContactKeyDTO {
+  id: string;
+  code: string;
+  created_by: string;
+  created_by_name: string;
+  created_at: string;
+  status: 'unused' | 'used';
+  used_ticket_id: string | null;
+  used_at: string | null;
 }
 
 export interface LookupResultDTO {
