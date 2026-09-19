@@ -1,0 +1,30 @@
+node_modules/
+dist/
+*.tsbuildinfo
+coverage/
+
+# 运行期数据（数据库与上传文件）
+apps/api/data/
+apps/api/storage/
+
+# 本地环境
+.env
+.env.*
+!.env.example
+
+# pnpm 本地缓存（沙箱内重定向）
+.pnpm-store/
+.pnpm-home/
+.pnpm-data/
+.pnpm-cache/
+
+# 本地 Node 运行时（便携版）
+.node-test/
+
+# 临时脚本
+.tmp-*.js
+.tmp-*.cjs
+
+*.log
+.DS_Store
+Thumbs.db

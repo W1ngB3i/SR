@@ -1,0 +1,21 @@
+{
+  "name": "sr-review-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SR 公会审核工单系统 monorepo",
+  "packageManager": "pnpm@12.4.2",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "typecheck": "pnpm --filter @sr/shared build && pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "dev": "pnpm --filter @sr/shared build && pnpm --filter @sr/ui build && pnpm --parallel --filter @sr/api --filter @sr/user-frontend --filter @sr/admin-frontend run dev",
+    "dev:api": "pnpm --filter @sr/api run dev",
+    "dev:user": "pnpm --filter @sr/user-frontend run dev",
+    "dev:admin": "pnpm --filter @sr/admin-frontend run dev",
+    "db:reset": "pnpm --filter @sr/api run db:reset",
+    "db:seed": "pnpm --filter @sr/api run db:seed"
+  }
+}
