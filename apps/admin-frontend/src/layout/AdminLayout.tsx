@@ -10,6 +10,7 @@ import {
   MenuUnfoldOutlined,
   NotificationOutlined,
   SettingOutlined,
+  SolutionOutlined,
   TeamOutlined,
 } from '@ant-design/icons';
 import { Avatar, Tooltip } from 'antd';
@@ -37,6 +38,7 @@ export function AdminLayout() {
       { path: '/stats', label: '仪表盘', icon: <DashboardOutlined />, allowed: canPlatform(role) },
       { path: '/rules', label: '规则配置', icon: <AuditOutlined />, allowed: canManage(role) },
       { path: '/announcements', label: '公告管理', icon: <NotificationOutlined />, allowed: canManage(role) },
+      { path: '/appeals', label: '申诉处理', icon: <SolutionOutlined />, allowed: canManage(role) },
       { path: '/users', label: '人员管理', icon: <TeamOutlined />, allowed: canPlatform(role) },
       { path: '/audit-logs', label: '审计日志', icon: <FileSearchOutlined />, allowed: canPlatform(role) },
       { path: '/config', label: '系统配置', icon: <SettingOutlined />, allowed: canPlatform(role) },

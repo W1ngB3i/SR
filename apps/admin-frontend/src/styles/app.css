@@ -549,6 +549,31 @@
   border-color: rgba(var(--sr-st-published), 0.32);
 }
 
+/* 申诉状态标签 */
+.appeal-tag {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  border-radius: 999px;
+}
+
+.appeal-tag--open {
+  color: rgb(var(--sr-st-pending));
+  background: rgba(var(--sr-st-pending), 0.09);
+  border-color: rgba(var(--sr-st-pending), 0.32);
+}
+
+.appeal-tag--resolved {
+  color: rgb(var(--sr-st-published));
+  background: rgba(var(--sr-st-published), 0.09);
+  border-color: rgba(var(--sr-st-published), 0.32);
+}
+
+.appeal-tag--dismissed {
+  color: rgb(var(--sr-st-resulted, 232, 139, 139));
+  background: rgba(var(--sr-st-resulted, 232, 139, 139), 0.09);
+  border-color: rgba(var(--sr-st-resulted, 232, 139, 139), 0.32);
+}
+
 /* 证据材料 */
 .detail-evidence {
   display: grid;

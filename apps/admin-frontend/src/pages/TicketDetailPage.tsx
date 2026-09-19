@@ -8,13 +8,18 @@ import {
   Image,
   Input,
   Modal,
+  Popconfirm,
   Radio,
   Select,
+  Space,
   Tag,
   Timeline,
+  type FormInstance,
 } from 'antd';
 import {
   ArrowLeftOutlined,
+  DeleteOutlined,
+  EditOutlined,
   FileOutlined,
   StarFilled,
 } from '@ant-design/icons';
@@ -25,6 +30,7 @@ import {
   GRADE_LABELS,
   MODULE_LABELS,
   STATUS_LABELS,
+  type DepartmentDTO,
   type Grade,
   type TicketDetailDTO,
 } from '@sr/shared';
@@ -32,12 +38,16 @@ import { GradeBadge, StatusTag } from '@sr/ui';
 import {
   ApiClientError,
 } from '../api/client';
+import { fetchDepartments } from '../api/admin';
 import {
+  deleteTicket,
   fetchTicketDetail,
   publishTicket,
   requestSupplement,
   reviewTicket,
   saveReceipt,
+  unpublishTicket,
+  updateTicketInfo,
 } from '../api/staff';
 import { useAuth } from '../auth/AuthContext';
 import { canManage } from '../roles';
@@ -48,6 +58,16 @@ interface ReceiptFormValues {
   pass?: boolean;
   target_department: string;
   comment: string;
+}
+
+interface InfoFormValues {
+  circle_name: string;
+  contact: string;
+  intention: string;
+  department_id: string;
+  mode_id: string;
+  module: 'PE' | 'PC' | 'BOTH';
+  self_proof: boolean;
 }
 
 function formatSize(bytes: number): string {
@@ -64,7 +84,11 @@ export function TicketDetailPage() {
   const [detail, setDetail] = useState<TicketDetailDTO | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
+  const [infoSaving, setInfoSaving] = useState(false);
+  const [departments, setDepartments] = useState<DepartmentDTO[]>([]);
   const [form] = Form.useForm<ReceiptFormValues>();
+  const [infoForm] = Form.useForm<InfoFormValues>();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -103,11 +127,18 @@ export function TicketDetailPage() {
   const isManager = canManage(user?.role);
   const isAssignee = !!user && detail?.assignee_id === user.id;
 
-  /** 回执可编辑：本人负责 + 状态为审核中 / 已出结果（复核退回后重填） */
-  const receiptEditable =
+  /** 回执可编辑：本人负责（审核中 / 复核退回重填）；总管/副总管全权——任意工单、含已公示修订 */
+  const ownEditable =
     !!detail && isAssignee && (detail.status === 'reviewing' || detail.status === 'resulted');
+  const managerEditable =
+    !!detail &&
+    isManager &&
+    (detail.status === 'reviewing' || detail.status === 'resulted' || detail.status === 'published');
+  const receiptEditable = ownEditable || managerEditable;
+  /** 已公示工单：总管/副总管直接修订公示结果（仅提交，不走草稿） */
+  const publishedRevision = managerEditable && detail?.status === 'published';
   /** 等待申请人补充材料时锁定表单 */
-  const receiptLocked = !!detail && detail.status === 'supplementing' && isAssignee;
+  const receiptLocked = !!detail && detail.status === 'supplementing' && isAssignee && !managerEditable;
   /** 复核面板：总管 + 回执已提交 + 已出结果 */
   const reviewable =
     !!detail &&
@@ -261,6 +292,70 @@ export function TicketDetailPage() {
     }
   };
 
+  // ---------------------------------------------------------------------------
+  // 总管/副总管全权操作：修订工单信息 / 撤销公示 / 删除工单
+  // ---------------------------------------------------------------------------
+
+  const openInfoModal = async () => {
+    if (!detail) return;
+    setInfoOpen(true);
+    if (departments.length === 0) {
+      try {
+        setDepartments(await fetchDepartments());
+      } catch (err) {
+        if (err instanceof ApiClientError) message.error(err.message);
+      }
+    }
+    infoForm.setFieldsValue({
+      circle_name: detail.circle_name,
+      contact: detail.contact,
+      intention: detail.intention,
+      department_id: detail.department_id,
+      mode_id: detail.mode_id,
+      module: detail.module,
+      self_proof: detail.self_proof,
+    });
+  };
+
+  const submitInfo = async () => {
+    if (!detail) return;
+    const values = await infoForm.validateFields();
+    setInfoSaving(true);
+    try {
+      const next = await updateTicketInfo(detail.id, values);
+      setDetail(next);
+      setInfoOpen(false);
+      message.success('工单信息已修订');
+    } catch (err) {
+      if (err instanceof ApiClientError) message.error(err.message);
+      throw err;
+    } finally {
+      setInfoSaving(false);
+    }
+  };
+
+  const handleUnpublish = async () => {
+    if (!detail) return;
+    try {
+      await unpublishTicket(detail.id);
+      message.success('已撤销公示，工单回到「已出结果」');
+      void load();
+    } catch (err) {
+      if (err instanceof ApiClientError) message.error(err.message);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!detail) return;
+    try {
+      await deleteTicket(detail.id);
+      message.success('工单已删除');
+      navigate('/pool', { replace: true });
+    } catch (err) {
+      if (err instanceof ApiClientError) message.error(err.message);
+    }
+  };
+
   if (loading && !detail) {
     return <div className="detail-loading sr-glass">正在加载工单…</div>;
   }
@@ -297,10 +392,40 @@ export function TicketDetailPage() {
             </span>
           </div>
         </div>
-        {isAssignee && detail.status === 'reviewing' && (
+        {(isAssignee || isManager) && detail.status === 'reviewing' && (
           <Button danger onClick={handleSupplementRequest}>
             退回补充
           </Button>
+        )}
+        {isManager && (
+          <Space wrap>
+            <Button icon={<EditOutlined />} onClick={() => void openInfoModal()}>
+              编辑信息
+            </Button>
+            {detail.status === 'published' && (
+              <Popconfirm
+                title="撤销公示"
+                description="工单将回到「已出结果」，可修订回执后重新公示。"
+                okText="确认撤销"
+                cancelText="取消"
+                onConfirm={() => void handleUnpublish()}
+              >
+                <Button>撤销公示</Button>
+              </Popconfirm>
+            )}
+            <Popconfirm
+              title="删除工单"
+              description="将级联删除回执、时间线与证据文件，不可恢复！"
+              okText="确认删除"
+              okButtonProps={{ danger: true }}
+              cancelText="取消"
+              onConfirm={() => void handleDelete()}
+            >
+              <Button danger icon={<DeleteOutlined />}>
+                删除
+              </Button>
+            </Popconfirm>
+          </Space>
         )}
       </div>
 
@@ -412,19 +537,31 @@ export function TicketDetailPage() {
                   <Input.TextArea rows={4} maxLength={500} placeholder="面向总管复核与结果公示的意见（可选）" />
                 </Form.Item>
                 <div className="detail-receipt__actions">
-                  <Button onClick={() => void handleSaveReceipt(false)} loading={saving}>
-                    保存草稿
-                  </Button>
-                  <Button
-                    type="primary"
-                    loading={saving}
-                    onClick={() => void handleSaveReceipt(true)}
-                  >
-                    提交回执
-                  </Button>
+                  {publishedRevision ? (
+                    <Button type="primary" loading={saving} onClick={() => void handleSaveReceipt(true)}>
+                      保存修订
+                    </Button>
+                  ) : (
+                    <>
+                      <Button onClick={() => void handleSaveReceipt(false)} loading={saving}>
+                        保存草稿
+                      </Button>
+                      <Button
+                        type="primary"
+                        loading={saving}
+                        onClick={() => void handleSaveReceipt(true)}
+                      >
+                        提交回执
+                      </Button>
+                    </>
+                  )}
                 </div>
                 <p className="detail-receipt__hint">
-                  提交后工单进入「已出结果」，由总管复核；复核退回后可在此重填再提交。
+                  {publishedRevision
+                    ? '该工单已公示：保存修订后公示结果即时更新，并记录修订时间线。'
+                    : !isAssignee && isManager
+                      ? '总管/副总管全权模式：可直接代为填写或修订任意工单的回执。'
+                      : '提交后工单进入「已出结果」，由总管复核；复核退回后可在此重填再提交。'}
                 </p>
               </Form>
             )}
@@ -573,6 +710,94 @@ export function TicketDetailPage() {
           </section>
         </div>
       </div>
+
+      <Modal
+        title="修订工单信息"
+        open={infoOpen}
+        onCancel={() => setInfoOpen(false)}
+        onOk={() => void submitInfo()}
+        okText="保存修订"
+        cancelText="取消"
+        confirmLoading={infoSaving}
+        destroyOnHidden
+      >
+        <Form<InfoFormValues> form={infoForm} layout="vertical" style={{ marginTop: 12 }}>
+          <InfoModalFields
+            infoForm={infoForm}
+            departments={departments}
+            currentDept={detail.department_id}
+          />
+        </Form>
+      </Modal>
     </div>
+  );
+}
+
+/** 信息修订表单字段：部门切换时联动过滤模式选项 */
+function InfoModalFields({
+  infoForm,
+  departments,
+  currentDept,
+}: {
+  infoForm: FormInstance<InfoFormValues>;
+  departments: DepartmentDTO[];
+  currentDept: string;
+}) {
+  const deptId = Form.useWatch('department_id', infoForm) ?? currentDept;
+  const modes = departments.find((d) => d.id === deptId)?.modes ?? [];
+  return (
+    <>
+      <Form.Item
+        name="circle_name"
+        label="圈名"
+        rules={[{ required: true, message: '请填写圈名' }]}
+      >
+        <Input maxLength={24} />
+      </Form.Item>
+      <Form.Item
+        name="contact"
+        label="联系方式"
+        rules={[{ required: true, message: '请填写联系方式' }]}
+      >
+        <Input maxLength={64} />
+      </Form.Item>
+      <Form.Item
+        name="intention"
+        label="审核意向"
+        rules={[{ required: true, message: '请填写审核意向' }]}
+      >
+        <Input maxLength={40} />
+      </Form.Item>
+      <Form.Item name="department_id" label="所属部门" rules={[{ required: true }]}>
+        <Select
+          options={departments.map((d) => ({ value: d.id, label: d.name }))}
+          placeholder="选择部门"
+          showSearch
+          optionFilterProp="label"
+        />
+      </Form.Item>
+      <Form.Item name="mode_id" label="审核模式" rules={[{ required: true }]}>
+        <Select
+          options={modes.map((m) => ({
+            value: m.id,
+            label: m.group_name ? `${m.group_name} / ${m.name}` : m.name,
+          }))}
+          placeholder="选择模式"
+          showSearch
+          optionFilterProp="label"
+        />
+      </Form.Item>
+      <Form.Item name="module" label="设备模块" rules={[{ required: true }]}>
+        <Select
+          options={Object.entries(MODULE_LABELS).map(([value, label]) => ({ value, label }))}
+        />
+      </Form.Item>
+      <Form.Item name="self_proof" label="自带证明">
+        <Radio.Group>
+          <Radio value={true}>有</Radio>
+          <Radio value={false}>无</Radio>
+        </Radio.Group>
+      </Form.Item>
+    </>
   );
 }

@@ -1,6 +1,7 @@
 import {
   API,
   type AnnouncementDTO,
+  type AppealDTO,
   type AuditLogDTO,
   type DepartmentDTO,
   type ModeDTO,
@@ -168,3 +169,20 @@ export const putUploadLimits = (limits: UploadLimitsDTO) =>
   });
 
 export const fetchStats = () => request<StatsDTO>(API.admin.stats);
+
+// ---------------------------------------------------------------------------
+// 申诉处理
+// ---------------------------------------------------------------------------
+
+export const fetchAppeals = (query: {
+  status?: string;
+  page: number;
+  page_size: number;
+  [key: string]: string | number | undefined;
+}) => request<Page<AppealDTO>>(API.admin.appeals, { query });
+
+export const handleAppeal = (id: string, action: 'resolve' | 'dismiss', note: string) =>
+  request<AppealDTO>(API.admin.appeal(id), {
+    method: 'PUT',
+    body: JSON.stringify({ action, note }),
+  });

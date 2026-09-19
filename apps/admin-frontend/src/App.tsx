@@ -12,6 +12,7 @@ import { StatsPage } from './pages/StatsPage';
 import { RulesAdminPage } from './pages/RulesAdminPage';
 import { UsersPage } from './pages/UsersPage';
 import { AnnouncementsPage } from './pages/AnnouncementsPage';
+import { AppealsPage } from './pages/AppealsPage';
 import { AuditLogsPage } from './pages/AuditLogsPage';
 import { ConfigPage } from './pages/ConfigPage';
 
@@ -101,6 +102,14 @@ export function App() {
             element={
               <RequireRole allow={canManage}>
                 <AnnouncementsPage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/appeals"
+            element={
+              <RequireRole allow={canManage}>
+                <AppealsPage />
               </RequireRole>
             }
           />

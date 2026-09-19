@@ -93,6 +93,28 @@ export const reviewTicket = (id: string, action: 'confirm' | 'reject', note: str
 export const publishTicket = (id: string) =>
   request<TicketSummaryDTO>(API.tickets.publish(id), { method: 'POST' });
 
+/** 修订工单基础信息（总管/副总管全权） */
+export const updateTicketInfo = (
+  id: string,
+  patch: Partial<{
+    circle_name: string;
+    contact: string;
+    intention: string;
+    department_id: string;
+    mode_id: string;
+    module: 'PE' | 'PC' | 'BOTH';
+    self_proof: boolean;
+  }>,
+) => request<TicketDetailDTO>(API.tickets.info(id), { method: 'PUT', body: JSON.stringify(patch) });
+
+/** 撤销公示（总管/副总管全权） */
+export const unpublishTicket = (id: string) =>
+  request<TicketSummaryDTO>(API.tickets.unpublish(id), { method: 'POST' });
+
+/** 删除工单（总管/副总管全权，不可恢复） */
+export const deleteTicket = (id: string) =>
+  request<{ ok: boolean }>(API.tickets.remove(id), { method: 'DELETE' });
+
 /** 证据直链（带签名 token，直接用于 img / video src） */
 export const attachmentStreamUrl = (a: AttachmentDTO): string => a.url;
 
