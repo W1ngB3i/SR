@@ -1,4 +1,14 @@
-import type { AppealStatus, DeviceModule, Grade, StaffRole, TicketEventType, TicketStatus } from './enums.js';
+import type {
+  AppealStatus,
+  DeviceModule,
+  Grade,
+  RobotMessageDirection,
+  RobotMessageKind,
+  RobotRole,
+  StaffRole,
+  TicketEventType,
+  TicketStatus,
+} from './enums.js';
 
 export const STATUS_LABELS: Record<TicketStatus, string> = {
   draft: '草稿',
@@ -72,6 +82,29 @@ export const ATTACHMENT_KIND_RULES = {
   image: ['.png', '.jpg', '.jpeg', '.webp', '.gif'],
   video: ['.mp4', '.mov', '.webm', '.mkv'],
 } as const;
+
+/** QQ 机器人身份角色文案 */
+export const ROBOT_ROLE_LABELS: Record<RobotRole, string> = {
+  applicant: '申请人',
+  reviewer: '审核员',
+  deputy: '审核副总管',
+  chief: '审核总管',
+};
+
+/** QQ 机器人消息类型文案 */
+export const ROBOT_MESSAGE_KIND_LABELS: Record<RobotMessageKind, string> = {
+  issue_code: '发接洽码',
+  reviewer_bind: '审核员绑定',
+  ticket_created: '@审核员新工单',
+  ticket_result: '@申请人结果',
+  unhandled: '未识别',
+};
+
+/** QQ 机器人消息方向文案 */
+export const ROBOT_MESSAGE_DIRECTION_LABELS: Record<RobotMessageDirection, string> = {
+  in: '收到',
+  out: '发出',
+};
 
 /** 业务错误码（稳定契约，前端据此提示） */
 export const BizCode = {

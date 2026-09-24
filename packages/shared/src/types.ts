@@ -2,6 +2,10 @@ import type {
   AppealStatus,
   DeviceModule,
   Grade,
+  RobotMessageDirection,
+  RobotMessageKind,
+  RobotMessageStatus,
+  RobotRole,
   StaffRole,
   TicketEventType,
   TicketStatus,
@@ -141,6 +145,9 @@ export interface StaffUserDTO {
   role: StaffRole;
   qq: string;
   skills: string;
+  /** 所属部门（配置中心部门 ID），用于机器人按部门 @审核员 */
+  department_id: string | null;
+  department_name: string | null;
   status: 'active' | 'disabled';
   created_at: string;
 }
@@ -180,6 +187,11 @@ export interface SystemConfigDTO {
   submission_cooldown_hours: number;
   reviewer_max_concurrent: number;
   upload_limits: UploadLimitsDTO;
+  /**
+   * 是否强制要求接洽码已绑定 QQ openid 才能提交。
+   * 机器人接管入口后开启；仍保留后台手工发码流程时保持关闭。
+   */
+  robot_require_bound_key: boolean;
 }
 
 /** 规则配置中心的对外只读快照：驱动申请表单与规则页 */
@@ -194,12 +206,64 @@ export interface RulesBundleDTO {
 export interface ContactKeyDTO {
   id: string;
   code: string;
-  created_by: string;
+  /** 签发人；为空表示由 QQ 机器人应玩家请求签发 */
+  created_by: string | null;
   created_by_name: string;
   created_at: string;
   status: 'unused' | 'used';
   used_ticket_id: string | null;
   used_at: string | null;
+  /** 机器人 @拿码时绑定的 QQ openid；后台手工生成的码为空 */
+  bind_openid: string | null;
+  bound_at: string | null;
+}
+
+/** QQ 机器人身份绑定：openid ↔ 系统用户 */
+export interface RobotIdentityDTO {
+  openid: string;
+  /** QQ 号码，仅用于展示与后台管理，@人一律用 openid */
+  qq_number: string;
+  role: RobotRole;
+  /** 审核员所属部门；申请人为 null */
+  dept_id: string | null;
+  dept_name: string | null;
+  /** 绑定来源：bot 为群里 @机器人 注册，manual 为总管后台录入 */
+  source: 'bot' | 'manual';
+  /** 绑定时记录的系统账号 ID（认证 ID），玩家为空 */
+  user_id: string | null;
+  guild_id: string;
+  created_at: string;
+}
+
+/** 机器人消息日志（收发双向） */
+export interface RobotMessageDTO {
+  id: string;
+  direction: RobotMessageDirection;
+  kind: RobotMessageKind;
+  status: RobotMessageStatus;
+  /** 入站为发送者 openid，出站为接收者 openid */
+  openid: string;
+  guild_id: string;
+  content: string;
+  ticket_id: string | null;
+  contact_key_id: string | null;
+  /** 发送失败原因；成功为空 */
+  error: string;
+  created_at: string;
+  sent_at: string | null;
+}
+
+/** 机器人接入状态摘要（管理后台顶部展示） */
+export interface RobotStatusDTO {
+  /** 缺少任一凭据即为未接通，此时只记消息日志不投递 */
+  configured: boolean;
+  sandbox: boolean;
+  appid: string;
+  identity_count: number;
+  bound_key_count: number;
+  failed_message_count: number;
+  /** 机器人签发接洽码时的签发人展示名 */
+  issuer_name: string;
 }
 
 export interface LookupResultDTO {

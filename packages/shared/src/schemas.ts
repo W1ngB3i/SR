@@ -4,6 +4,7 @@ import { GRADES } from './enums.js';
 export const gradeSchema = z.enum(GRADES);
 export const deviceModuleSchema = z.enum(['PE', 'PC', 'BOTH']);
 export const staffRoleSchema = z.enum(['reviewer', 'deputy', 'chief', 'admin']);
+export const robotRoleSchema = z.enum(['applicant', 'reviewer', 'deputy', 'chief']);
 export const ticketStatusSchema = z.enum([
   'pending_claim',
   'reviewing',
@@ -119,6 +120,7 @@ export const userCreateSchema = z.object({
   password: z.string().min(8, '密码至少 8 位').max(64),
   qq: z.string().trim().regex(/^\d{5,12}$/, 'QQ 号为 5-12 位数字').max(12).optional().or(z.literal('')),
   skills: z.string().trim().max(60, '特长不超过 60 个字符').optional().or(z.literal('')),
+  department_id: z.string().trim().max(64).nullish(),
 });
 
 export const userUpdateSchema = z.object({
@@ -126,6 +128,7 @@ export const userUpdateSchema = z.object({
   role: staffRoleSchema.optional(),
   qq: z.string().trim().regex(/^\d{5,12}$/, 'QQ 号为 5-12 位数字').max(12).optional(),
   skills: z.string().trim().max(60, '特长不超过 60 个字符').optional(),
+  department_id: z.string().trim().max(64).nullish(),
   status: z.enum(['active', 'disabled']).optional(),
 });
 
@@ -165,6 +168,31 @@ export const listQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   page_size: z.coerce.number().int().min(1).max(100).default(10),
 });
+
+// ---------------------------------------------------------------------------
+// QQ 机器人：身份绑定（总管/副总管在后台维护）
+// ---------------------------------------------------------------------------
+
+/** QQ 号：5-12 位数字；留空表示未登记（机器人自动绑定时不带 QQ 号，后台可稍后补） */
+const robotQqNumber = z.string().trim().regex(/^\d{5,12}$/, 'QQ 号为 5-12 位数字').or(z.literal(''));
+
+/** openid 是 QQ 官方平台的用户标识，非 QQ 号码字符串；QQ 号仅用于展示，允许留空 */
+export const robotIdentityCreateSchema = z.object({
+  openid: z.string().trim().min(8, 'openid 至少 8 个字符').max(128, 'openid 过长'),
+  qq_number: robotQqNumber.default(''),
+  role: robotRoleSchema,
+  dept_id: z.string().trim().max(64).nullish(),
+  guild_id: z.string().trim().max(64).optional().default(''),
+});
+export type RobotIdentityCreateInput = z.infer<typeof robotIdentityCreateSchema>;
+
+export const robotIdentityUpdateSchema = z.object({
+  qq_number: robotQqNumber.optional(),
+  role: robotRoleSchema.optional(),
+  dept_id: z.string().trim().max(64).nullish(),
+  guild_id: z.string().trim().max(64).optional(),
+});
+export type RobotIdentityUpdateInput = z.infer<typeof robotIdentityUpdateSchema>;
 
 /** zod 校验失败 → 业务错误 details 映射 */
 export function zodFieldErrors(error: z.ZodError): Record<string, string[]> {

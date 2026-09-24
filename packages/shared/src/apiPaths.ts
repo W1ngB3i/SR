@@ -35,6 +35,10 @@ export const API = {
     rules: `${API_PREFIX}/public/rules`,
     announcements: `${API_PREFIX}/public/announcements`,
   },
+  /** QQ 官方开放平台回调：按平台要求暴露在 /api/robot 下，不带版本号 */
+  robot: {
+    webhook: '/api/robot/webhook',
+  },
   contactKeys: {
     /** GET 我生成的接洽码列表；POST 生成一个新接洽码 */
     list: `${API_PREFIX}/contact-keys`,
@@ -55,6 +59,14 @@ export const API = {
     appeals: `${API_PREFIX}/admin/appeals`,
     appeal: (id: string) => `${API_PREFIX}/admin/appeals/${id}`,
     stats: `${API_PREFIX}/admin/stats`,
+    /** 机器人管理：身份绑定 / 接洽码绑定状态 / 消息日志（总管、副总管） */
+    robotIdentities: `${API_PREFIX}/admin/robot-identities`,
+    robotIdentity: (openid: string) =>
+      `${API_PREFIX}/admin/robot-identities/${encodeURIComponent(openid)}`,
+    robotMessages: `${API_PREFIX}/admin/robot-messages`,
+    robotMessageResend: (id: string) => `${API_PREFIX}/admin/robot-messages/${id}/resend`,
+    robotStatus: `${API_PREFIX}/admin/robot-status`,
+    contactKeys: `${API_PREFIX}/admin/contact-keys`,
   },
   files: {
     stream: (attachmentId: string) => `${API_PREFIX}/files/${attachmentId}`,
