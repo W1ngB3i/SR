@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS "user" (
   password_hash TEXT NOT NULL,
   qq            TEXT NOT NULL DEFAULT '',
   skills        TEXT NOT NULL DEFAULT '',
+  department_id TEXT REFERENCES department(id),
   status        TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','disabled')),
   created_at    TEXT NOT NULL
 );
@@ -140,14 +141,54 @@ CREATE TABLE IF NOT EXISTS config (
 );
 
 -- 接洽码（一次性）：审核员生成后线下交付申请人，提单时消耗
+-- created_by 为空表示该码由 QQ 机器人应玩家请求签发，没有人工签发人
 CREATE TABLE IF NOT EXISTS contact_key (
   id             TEXT PRIMARY KEY,
   code           TEXT NOT NULL UNIQUE,
-  created_by     TEXT NOT NULL REFERENCES "user"(id),
+  created_by     TEXT REFERENCES "user"(id),
   created_at     TEXT NOT NULL,
   status         TEXT NOT NULL DEFAULT 'unused' CHECK (status IN ('unused','used')),
   used_ticket_id TEXT,
-  used_at        TEXT
+  used_at        TEXT,
+  -- 机器人 @拿码时写入；玩家提交时用于校验与结果推送（@人只能用 openid）
+  bind_openid    TEXT,
+  bound_at       TEXT,
+  -- 签发时所在群 openid：结果推送需按群 openid 投递，仅靠玩家 openid 无法定位群
+  guild_id       TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_key_created_by ON contact_key(created_by);
 CREATE INDEX IF NOT EXISTS idx_key_status ON contact_key(status);
+CREATE INDEX IF NOT EXISTS idx_key_used_ticket ON contact_key(used_ticket_id);
+
+-- QQ 机器人身份绑定：openid ↔ 系统用户（申请人 / 审核员 / 总管 / 副总管）
+CREATE TABLE IF NOT EXISTS robot_identities (
+  openid     TEXT PRIMARY KEY,
+  qq_number  TEXT NOT NULL DEFAULT '',
+  role       TEXT NOT NULL CHECK (role IN ('applicant','reviewer','deputy','chief')),
+  dept_id    TEXT REFERENCES department(id),
+  user_id    TEXT REFERENCES "user"(id),
+  guild_id   TEXT NOT NULL DEFAULT '',
+  source     TEXT NOT NULL DEFAULT 'bot' CHECK (source IN ('bot','manual')),
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_robot_identity_dept ON robot_identities(dept_id);
+CREATE INDEX IF NOT EXISTS idx_robot_identity_role ON robot_identities(role);
+
+-- 机器人消息日志：收发双向，失败可手动重发
+CREATE TABLE IF NOT EXISTS robot_message (
+  id             TEXT PRIMARY KEY,
+  direction      TEXT NOT NULL CHECK (direction IN ('in','out')),
+  kind           TEXT NOT NULL,
+  status         TEXT NOT NULL CHECK (status IN ('received','sent','failed','skipped')),
+  openid         TEXT NOT NULL DEFAULT '',
+  guild_id       TEXT NOT NULL DEFAULT '',
+  content        TEXT NOT NULL DEFAULT '',
+  ticket_id      TEXT,
+  contact_key_id TEXT,
+  error          TEXT NOT NULL DEFAULT '',
+  created_at     TEXT NOT NULL,
+  sent_at        TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_robot_message_created ON robot_message(created_at);
+CREATE INDEX IF NOT EXISTS idx_robot_message_status ON robot_message(status);
+CREATE INDEX IF NOT EXISTS idx_robot_message_ticket ON robot_message(ticket_id);

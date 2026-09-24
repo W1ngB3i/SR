@@ -40,3 +40,26 @@ export function ensureDirs(): void {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   fs.mkdirSync(STORAGE_DIR, { recursive: true });
 }
+
+// ---------------------------------------------------------------------------
+// QQ 官方开放平台机器人
+// ---------------------------------------------------------------------------
+
+/** 机器人 AppID（q.qq.com 创建应用后获得） */
+export const QQ_BOT_APPID = process.env.QQ_BOT_APPID ?? '';
+/** 机器人 Secret：用于 Webhook 回调验签与 Ed25519 应答 */
+export const QQ_BOT_SECRET = process.env.QQ_BOT_SECRET ?? '';
+/** 机器人 Token：调用开放接口的凭据 */
+export const QQ_BOT_TOKEN = process.env.QQ_BOT_TOKEN ?? '';
+/** 沙箱环境开关：true 时开放接口域名切换到 sandbox.api.sgroup.qq.com */
+export const QQ_BOT_SANDBOX = process.env.QQ_BOT_SANDBOX === 'true';
+
+/** 申请人端站点地址，用于拼接机器人按钮链接 */
+export const PUBLIC_SITE_URL = (process.env.PUBLIC_SITE_URL ?? 'http://localhost:5173').replace(/\/+$/, '');
+/** 管理端站点地址，用于拼接审核工作台按钮链接 */
+export const ADMIN_SITE_URL = (process.env.ADMIN_SITE_URL ?? 'http://localhost:5174').replace(/\/+$/, '');
+
+/** 机器人是否具备真实投递能力（三者齐备才调用开放接口，否则只记日志待重发） */
+export function isRobotConfigured(): boolean {
+  return Boolean(QQ_BOT_APPID && QQ_BOT_SECRET && QQ_BOT_TOKEN);
+}

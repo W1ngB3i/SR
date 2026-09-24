@@ -8,9 +8,20 @@ export function createApp() {
   const app = express();
   app.disable('x-powered-by');
   app.use(cors());
-  app.use(express.json({ limit: '1mb' }));
-  app.use(express.urlencoded({ extended: false }));
+  // 先挂载 request_id：请求体解析失败时响应也要能带上链路标识
   app.use(requestContext);
+  // 保留原始报文：QQ 机器人回调验签需要按字节校验签名
+  // strict:false —— 系统配置接口（PUT /admin/config/:key）允许用裸布尔 / 裸数字作为请求体
+  app.use(
+    express.json({
+      limit: '1mb',
+      strict: false,
+      verify: (req, _res, buf) => {
+        (req as express.Request & { rawBody?: Buffer }).rawBody = buf;
+      },
+    }),
+  );
+  app.use(express.urlencoded({ extended: false }));
 
   // 健康检查：供反向代理与监控探活，无需鉴权
   app.get('/healthz', (_req, res) => {

@@ -4,6 +4,8 @@ import {
   appealHandleSchema,
   departmentSchema,
   modeSchema,
+  robotIdentityCreateSchema,
+  robotIdentityUpdateSchema,
   userCreateSchema,
   userUpdateSchema,
   passwordResetSchema,
@@ -21,6 +23,17 @@ import {
 } from '../services/announcement.js';
 import { listAuditLogs } from '../services/audit.js';
 import { getAllConfig, setConfig, type ConfigKey, type ConfigMap } from '../services/config.js';
+import { listAllContactKeys } from '../services/key.js';
+import {
+  createIdentity,
+  deleteIdentity,
+  listIdentities,
+  listMessages,
+  resendMessage,
+  robotSummary,
+  updateIdentity,
+} from '../services/robot.js';
+import { robotPlatformInfo } from '../services/qq.js';
 import {
   createDepartment,
   createMode,
@@ -177,6 +190,7 @@ const CONFIG_VALUE_VALIDATORS: {
     }
     return null;
   },
+  robot_require_bound_key: (v) => (typeof v === 'boolean' ? v : null),
 };
 
 adminRouter.put('/config/:key', requireRoles(...PLATFORM_ROLES), (req, res, next) => {
@@ -326,6 +340,114 @@ adminRouter.put('/appeals/:id', requireRoles(...MANAGER_ROLES), (req, res, next)
     const u = req.user;
     if (!u) throw ApiError.unauthorized();
     sendOk(res, handleAppeal(idParam(req), parsed.action, parsed.note, { id: u.id, name: u.name, role: u.role }));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// 机器人管理（总管/副总管：身份绑定 / 接洽码绑定状态 / 消息日志）
+// ---------------------------------------------------------------------------
+
+adminRouter.get('/robot-status', requireRoles(...MANAGER_ROLES), (_req, res, next) => {
+  try {
+    sendOk(res, robotSummary(robotPlatformInfo()));
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminRouter.get('/robot-identities', requireRoles(...MANAGER_ROLES), (req, res, next) => {
+  try {
+    const page = Math.max(1, Number(req.query.page ?? 1) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(req.query.page_size ?? 20) || 20));
+    sendOk(
+      res,
+      listIdentities({
+        keyword: req.query.keyword ? String(req.query.keyword) : undefined,
+        role: req.query.role ? String(req.query.role) : undefined,
+        dept_id: req.query.dept_id ? String(req.query.dept_id) : undefined,
+        page,
+        pageSize,
+      }),
+    );
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminRouter.post('/robot-identities', requireRoles(...MANAGER_ROLES), (req, res, next) => {
+  try {
+    const parsed = robotIdentityCreateSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw ApiError.badRequest('FIELD_REQUIRED', '绑定信息校验失败', zodFieldErrors(parsed.error));
+    }
+    sendOk(res, createIdentity(parsed.data, actor(req)), 201);
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminRouter.put('/robot-identities/:openid', requireRoles(...MANAGER_ROLES), (req, res, next) => {
+  try {
+    const parsed = robotIdentityUpdateSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      throw ApiError.badRequest('FIELD_REQUIRED', '绑定信息校验失败', zodFieldErrors(parsed.error));
+    }
+    sendOk(res, updateIdentity(decodeURIComponent(req.params['openid'] ?? ''), parsed.data, actor(req)));
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminRouter.delete('/robot-identities/:openid', requireRoles(...MANAGER_ROLES), (req, res, next) => {
+  try {
+    deleteIdentity(decodeURIComponent(req.params['openid'] ?? ''), actor(req));
+    sendOk(res, { ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminRouter.get('/robot-messages', requireRoles(...MANAGER_ROLES), (req, res, next) => {
+  try {
+    const page = Math.max(1, Number(req.query.page ?? 1) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(req.query.page_size ?? 20) || 20));
+    sendOk(
+      res,
+      listMessages({
+        status: req.query.status ? String(req.query.status) : undefined,
+        kind: req.query.kind ? String(req.query.kind) : undefined,
+        page,
+        pageSize,
+      }),
+    );
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminRouter.post('/robot-messages/:id/resend', requireRoles(...MANAGER_ROLES), async (req, res, next) => {
+  try {
+    sendOk(res, await resendMessage(idParam(req), actor(req)));
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminRouter.get('/contact-keys', requireRoles(...MANAGER_ROLES), (req, res, next) => {
+  try {
+    const bound = req.query.bound;
+    const page = Math.max(1, Number(req.query.page ?? 1) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(req.query.page_size ?? 20) || 20));
+    sendOk(
+      res,
+      listAllContactKeys({
+        bound: bound === 'bound' || bound === 'unbound' ? bound : undefined,
+        page,
+        pageSize,
+      }),
+    );
   } catch (err) {
     next(err);
   }

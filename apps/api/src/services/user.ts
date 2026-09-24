@@ -13,9 +13,14 @@ interface UserRow {
   password_hash: string;
   qq: string;
   skills: string;
+  department_id: string | null;
+  department_name: string | null;
   status: 'active' | 'disabled';
   created_at: string;
 }
+
+/** 用户表统一带出部门名，供机器人按部门 @审核员与后台展示 */
+const USER_SELECT = `SELECT u.*, d.name AS department_name FROM "user" u LEFT JOIN department d ON d.id = u.department_id`;
 
 function rowToDto(row: UserRow): StaffUserDTO {
   return {
@@ -25,18 +30,20 @@ function rowToDto(row: UserRow): StaffUserDTO {
     role: staffRoleSchema.parse(row.role),
     qq: row.qq ?? '',
     skills: row.skills ?? '',
+    department_id: row.department_id ?? null,
+    department_name: row.department_name ?? null,
     status: row.status,
     created_at: row.created_at,
   };
 }
 
 export function getStaffUserById(id: string): StaffUserDTO | null {
-  const row = getDb().prepare('SELECT * FROM "user" WHERE id = ?').get(id) as UserRow | undefined;
+  const row = getDb().prepare(`${USER_SELECT} WHERE u.id = ?`).get(id) as UserRow | undefined;
   return row ? rowToDto(row) : null;
 }
 
 export function getStaffUserByUsername(username: string): StaffUserDTO | null {
-  const row = getDb().prepare('SELECT * FROM "user" WHERE username = ?').get(username) as
+  const row = getDb().prepare(`${USER_SELECT} WHERE u.username = ?`).get(username) as
     | UserRow
     | undefined;
   return row ? rowToDto(row) : null;
@@ -59,7 +66,7 @@ export function verifyLogin(username: string, password: string): StaffUserDTO {
 
 export function listUsers(): StaffUserDTO[] {
   const rows = getDb()
-    .prepare('SELECT * FROM "user" ORDER BY created_at ASC, id ASC')
+    .prepare(`${USER_SELECT} ORDER BY u.created_at ASC, u.id ASC`)
     .all() as UserRow[];
   return rows.map(rowToDto);
 }
@@ -68,7 +75,8 @@ export function listUsers(): StaffUserDTO[] {
 export function listAssignableUsers(): StaffUserDTO[] {
   const rows = getDb()
     .prepare(
-      `SELECT * FROM "user" WHERE status = 'active' AND role IN ('reviewer','deputy','chief') ORDER BY role = 'chief' DESC, role = 'deputy' DESC, name ASC`,
+      `${USER_SELECT} WHERE u.status = 'active' AND u.role IN ('reviewer','deputy','chief')
+       ORDER BY u.role = 'chief' DESC, u.role = 'deputy' DESC, u.name ASC`,
     )
     .all() as UserRow[];
   return rows.map(rowToDto);
@@ -81,6 +89,7 @@ export function createUser(input: {
   password: string;
   qq?: string;
   skills?: string;
+  department_id?: string | null;
   operator: { id: string | null; name: string } | null;
 }): StaffUserDTO {
   const db = getDb();
@@ -90,8 +99,8 @@ export function createUser(input: {
   }
   const id = newId('usr');
   db.prepare(
-    `INSERT INTO "user" (id, username, name, role, password_hash, qq, skills, status, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
+    `INSERT INTO "user" (id, username, name, role, password_hash, qq, skills, department_id, status, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
   ).run(
     id,
     input.username,
@@ -100,6 +109,7 @@ export function createUser(input: {
     hashPassword(input.password),
     input.qq ?? '',
     input.skills ?? '',
+    input.department_id ?? null,
     nowIso(),
   );
   const created = getStaffUserById(id)!;
@@ -114,6 +124,7 @@ export function createUser(input: {
       role: created.role,
       qq: created.qq,
       skills: created.skills,
+      department_id: created.department_id,
     }),
     detail: `创建账号 ${created.name}（${created.username}）`,
   });
@@ -127,6 +138,7 @@ export function updateUser(
     role?: StaffUserDTO['role'];
     qq?: string;
     skills?: string;
+    department_id?: string | null;
     status?: 'active' | 'disabled';
   },
   operator: { id: string | null; name: string } | null,
@@ -146,6 +158,9 @@ export function updateUser(
   if (patch.skills !== undefined) {
     db.prepare('UPDATE "user" SET skills = ? WHERE id = ?').run(patch.skills, id);
   }
+  if (patch.department_id !== undefined) {
+    db.prepare('UPDATE "user" SET department_id = ? WHERE id = ?').run(patch.department_id ?? null, id);
+  }
   if (patch.status !== undefined) {
     db.prepare('UPDATE "user" SET status = ? WHERE id = ?').run(patch.status, id);
   }
@@ -160,6 +175,7 @@ export function updateUser(
       role: before.role,
       qq: before.qq,
       skills: before.skills,
+      department_id: before.department_id,
       status: before.status,
     }),
     after: JSON.stringify({
@@ -167,6 +183,7 @@ export function updateUser(
       role: after.role,
       qq: after.qq,
       skills: after.skills,
+      department_id: after.department_id,
       status: after.status,
     }),
   });

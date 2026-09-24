@@ -25,6 +25,8 @@ import { ApiError } from '../lib/errors.js';
 import { genQueryCode, newId, nowIso } from '../lib/ids.js';
 import { writeAudit, type AuditActor } from './audit.js';
 import { getConfig } from './config.js';
+import { isContactKeyBound } from './key.js';
+import { notifyApplicantForTicket, notifyReviewersForTicket } from './robot.js';
 import { attachmentPhysicalPath, attachmentsForTicket, cleanupFiles, saveAttachmentMeta } from './storage.js';
 
 interface TicketRow {
@@ -196,6 +198,15 @@ export function createTicket(
     throw ApiError.badRequest(BizCode.InvalidInput, '审核模式与所选部门不匹配', { mode_id: ['请重新选择模式'] });
   }
 
+  // 机器人接管入口时，接洽码必须已绑定 QQ openid（否则收不到结果推送，也无法追溯身份）
+  if (getConfig('robot_require_bound_key') && !isContactKeyBound(input.contact)) {
+    throw ApiError.badRequest(
+      BizCode.InvalidInput,
+      '接洽码无效或未绑定 QQ，请在群里 @机器人 发送「拿接洽码」获取新码',
+      { contact: ['请使用机器人签发的接洽码'] },
+    );
+  }
+
   const id = newId('tkt');
   let queryCode = genQueryCode();
   for (let i = 0; i < 5; i++) {
@@ -233,6 +244,11 @@ export function createTicket(
       detail: '提交工单',
     });
   })();
+
+  // 工单创建后 @该部门审核员；通知失败不影响提交结果
+  void notifyReviewersForTicket(id).catch((err: unknown) => {
+    console.error('[robot] 通知审核员失败:', err);
+  });
 
   return { ticket_id: id, query_code: queryCode };
 }
@@ -786,7 +802,7 @@ export function reviewTicket(
   actor: AuditActor & { id: string },
 ): TicketSummaryDTO {
   const db = getDb();
-  return db.transaction((): TicketSummaryDTO => {
+  const result = db.transaction((): TicketSummaryDTO => {
     const row = getJoinedRow(id);
     if (!row) throw ApiError.notFound(BizCode.TicketNotFound, '工单不存在');
     const receipt = loadReceipt(id);
@@ -810,12 +826,21 @@ export function reviewTicket(
     }
     return toSummary(getJoinedRow(id)!);
   })();
+  if (action === 'confirm') notifyPublished(id);
+  return result;
+}
+
+/** 公示完成后 @申请人推送结果；通知失败不影响公示结果 */
+function notifyPublished(ticketId: string): void {
+  void notifyApplicantForTicket(ticketId).catch((err: unknown) => {
+    console.error('[robot] 推送结果失败:', err);
+  });
 }
 
 /** 发布公示（独立入口，与复核确认等效，均为已出结果 → 已公示） */
 export function publishTicket(id: string, actor: AuditActor & { id: string }): TicketSummaryDTO {
   const db = getDb();
-  return db.transaction((): TicketSummaryDTO => {
+  const result = db.transaction((): TicketSummaryDTO => {
     const row = getJoinedRow(id);
     if (!row) throw ApiError.notFound(BizCode.TicketNotFound, '工单不存在');
     const receipt = loadReceipt(id);
@@ -825,6 +850,8 @@ export function publishTicket(id: string, actor: AuditActor & { id: string }): T
     publishLocked(id, row, actor);
     return toSummary(getJoinedRow(id)!);
   })();
+  notifyPublished(id);
+  return result;
 }
 
 function publishLocked(id: string, row: JoinedRow, actor: AuditActor): void {

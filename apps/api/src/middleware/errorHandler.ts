@@ -40,6 +40,20 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
     });
     return;
   }
+  // 请求体解析失败（JSON 语法错误 / 体积超限等）：属客户端输入问题，不应回落 500
+  const bodyErr = err as { type?: unknown; status?: unknown };
+  if (typeof bodyErr?.type === 'string' && bodyErr.type.startsWith('entity.')) {
+    const tooLarge = bodyErr.status === 413;
+    res.status(tooLarge ? 413 : 400).json({
+      data: null,
+      error: {
+        code: BizCode.InvalidInput,
+        message: tooLarge ? '请求体超出大小限制' : '请求体不是合法的 JSON',
+      },
+      request_id: requestId,
+    });
+    return;
+  }
   console.error(`[api][${requestId}] unhandled error:`, err);
   res.status(500).json({
     data: null,

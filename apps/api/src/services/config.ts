@@ -18,6 +18,7 @@ export interface ConfigMap {
   submission_cooldown_hours: number;
   reviewer_max_concurrent: number;
   upload_limits: UploadLimits;
+  robot_require_bound_key: boolean;
 }
 
 export const CONFIG_DEFAULTS: ConfigMap = {
@@ -33,6 +34,8 @@ export const CONFIG_DEFAULTS: ConfigMap = {
     image_ext: ['.png', '.jpg', '.jpeg', '.webp', '.gif'],
     video_ext: ['.mp4', '.mov', '.webm', '.mkv'],
   },
+  // 默认关闭：后台手工发码流程不受影响；机器人接管入口后由总管开启
+  robot_require_bound_key: false,
 };
 
 export type ConfigKey = keyof ConfigMap;
@@ -63,6 +66,7 @@ export function getAllConfig(): (ConfigMap & Record<string, unknown>) & { _meta?
     submission_cooldown_hours: getConfig('submission_cooldown_hours'),
     reviewer_max_concurrent: getConfig('reviewer_max_concurrent'),
     upload_limits: getConfig('upload_limits'),
+    robot_require_bound_key: getConfig('robot_require_bound_key'),
   };
 }
 
@@ -71,6 +75,7 @@ const CONFIG_LABELS: Record<ConfigKey, string> = {
   submission_cooldown_hours: '提交冷却期（小时）',
   reviewer_max_concurrent: '审核员同时处理上限',
   upload_limits: '证据上传限制',
+  robot_require_bound_key: '接洽码强制绑定 QQ',
 };
 
 /** 更新配置：版本号自增并写审计日志 */
