@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { App, Button, Form, Input, InputNumber, Select, Spin } from 'antd';
+import { App, Button, Form, Input, InputNumber, Select, Spin, Switch } from 'antd';
 import type { SystemConfigDTO } from '@sr/shared';
 import {
   fetchSystemConfig,
   putFeedbackContacts,
   putReviewerMaxConcurrent,
+  putRobotRequireBoundKey,
   putSubmissionCooldown,
   putUploadLimits,
 } from '../api/admin';
@@ -183,6 +184,37 @@ export function ConfigPage() {
           </Form>
         </section>
       </div>
+
+      <section className="sr-glass detail-card config-card">
+        <h2 className="detail-card__title">接洽码绑定</h2>
+        <p className="config-card__desc">
+          开启后只有机器人签发、且已绑定 QQ 的接洽码才能提交工单，审核结果会自动 @申请人；
+          关闭时保留审核员在后台手工发码的流程。
+        </p>
+        <div className="config-switch">
+          <Switch
+            checked={config.robot_require_bound_key}
+            loading={savingKey === 'robot'}
+            checkedChildren="强制绑定"
+            unCheckedChildren="允许手工码"
+            onChange={(checked) =>
+              void runSave(
+                'robot',
+                async () => {
+                  await putRobotRequireBoundKey(checked);
+                  setConfig((prev) => (prev ? { ...prev, robot_require_bound_key: checked } : prev));
+                },
+                '接洽码绑定策略已更新',
+              )
+            }
+          />
+          <span className="config-switch__hint">
+            {config.robot_require_bound_key
+              ? '当前：申请人必须先在群里 @机器人 领取接洽码'
+              : '当前：审核员手工签发的接洽码同样可用'}
+          </span>
+        </div>
+      </section>
 
       <section className="sr-glass detail-card config-card">
         <h2 className="detail-card__title">上传限制</h2>

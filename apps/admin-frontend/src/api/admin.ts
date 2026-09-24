@@ -6,6 +6,7 @@ import {
   type DepartmentDTO,
   type ModeDTO,
   type Page,
+  type RulesBundleDTO,
   type StaffUserDTO,
   type StatsDTO,
   type SystemConfigDTO,
@@ -70,6 +71,13 @@ export const deleteMode = (id: string) =>
 // 人员管理
 // ---------------------------------------------------------------------------
 
+/**
+ * 部门下拉选项：取自公开规则快照（仅含启用中的部门）。
+ * 平台管理员角色无权访问 /admin/departments，故不复用该接口。
+ */
+export const fetchDepartmentOptions = async (): Promise<DepartmentDTO[]> =>
+  (await request<RulesBundleDTO>(API.publicApi.rules)).departments;
+
 export const fetchUsers = () => request<StaffUserDTO[]>(API.admin.users);
 
 export const createUser = (input: {
@@ -79,6 +87,7 @@ export const createUser = (input: {
   password: string;
   qq?: string;
   skills?: string;
+  department_id?: string | null;
 }) => request<StaffUserDTO>(API.admin.users, { method: 'POST', body: JSON.stringify(input) });
 
 export const updateUser = (
@@ -88,6 +97,7 @@ export const updateUser = (
     role: StaffUserDTO['role'];
     qq: string;
     skills: string;
+    department_id: string | null;
     status: 'active' | 'disabled';
   }>,
 ) => request<StaffUserDTO>(API.admin.user(id), { method: 'PUT', body: JSON.stringify(patch) });
@@ -160,6 +170,12 @@ export const putUploadLimits = (limits: UploadLimitsDTO) =>
   request<{ ok: boolean }>(API.admin.configKey('upload_limits'), {
     method: 'PUT',
     body: JSON.stringify(limits),
+  });
+
+export const putRobotRequireBoundKey = (required: boolean) =>
+  request<{ ok: boolean }>(API.admin.configKey('robot_require_bound_key'), {
+    method: 'PUT',
+    body: JSON.stringify(required),
   });
 
 export const fetchStats = () => request<StatsDTO>(API.admin.stats);

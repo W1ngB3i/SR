@@ -14,6 +14,7 @@ import { RulesAdminPage } from './pages/RulesAdminPage';
 import { UsersPage } from './pages/UsersPage';
 import { AnnouncementsPage } from './pages/AnnouncementsPage';
 import { AppealsPage } from './pages/AppealsPage';
+import { RobotPage } from './pages/RobotPage';
 import { AuditLogsPage } from './pages/AuditLogsPage';
 import { ConfigPage } from './pages/ConfigPage';
 
@@ -119,6 +120,14 @@ export function App() {
             element={
               <RequireRole allow={canManage}>
                 <AppealsPage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/robot"
+            element={
+              <RequireRole allow={canManage}>
+                <RobotPage />
               </RequireRole>
             }
           />

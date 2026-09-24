@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { App, Button, Form, Input, Modal, Popconfirm, Select, Switch, Table, Tag } from 'antd';
+import { App, Button, Form, Input, Modal, Select, Switch, Table, Tag, Typography } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
-import { ROLE_LABELS, type StaffRole, type StaffUserDTO } from '@sr/shared';
-import { createUser, fetchUsers, resetPassword, updateUser } from '../api/admin';
+import { ROLE_LABELS, type DepartmentDTO, type StaffRole, type StaffUserDTO } from '@sr/shared';
+import {
+  createUser,
+  fetchDepartmentOptions,
+  fetchUsers,
+  resetPassword,
+  updateUser,
+} from '../api/admin';
 import { ApiClientError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 
@@ -15,6 +21,7 @@ interface CreateUserValues {
   password: string;
   qq?: string;
   skills?: string;
+  department_id?: string;
 }
 
 interface EditUserValues {
@@ -22,6 +29,7 @@ interface EditUserValues {
   role: StaffRole;
   qq?: string;
   skills?: string;
+  department_id?: string;
   active: boolean;
 }
 
@@ -36,6 +44,7 @@ export function UsersPage() {
 
   const [users, setUsers] = useState<StaffUserDTO[]>([]);
   const [loading, setLoading] = useState(false);
+  const [departments, setDepartments] = useState<DepartmentDTO[]>([]);
 
   const [creating, setCreating] = useState(false);
   const [createForm] = Form.useForm<CreateUserValues>();
@@ -63,6 +72,17 @@ export function UsersPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    fetchDepartmentOptions()
+      .then(setDepartments)
+      .catch(() => setDepartments([]));
+  }, []);
+
+  const deptOptions = useMemo(
+    () => departments.map((d) => ({ value: d.id, label: d.name })),
+    [departments],
+  );
 
   const saveCreate = async () => {
     const values = await createForm.validateFields();
@@ -94,6 +114,7 @@ export function UsersPage() {
       role: target.role,
       qq: target.qq || undefined,
       skills: target.skills || undefined,
+      department_id: target.department_id ?? undefined,
       active: target.status === 'active',
     });
   };
@@ -108,6 +129,7 @@ export function UsersPage() {
         role: values.role,
         qq: values.qq ?? '',
         skills: values.skills ?? '',
+        department_id: values.department_id ?? null,
         status: values.active ? 'active' : 'disabled',
       });
       message.success('账号已更新');
@@ -155,6 +177,25 @@ export function UsersPage() {
         dataIndex: 'role',
         width: 120,
         render: (r: StaffRole) => <span className={`admin-role admin-role--${r}`}>{ROLE_LABELS[r]}</span>,
+      },
+      {
+        title: '部门',
+        dataIndex: 'department_name',
+        width: 130,
+        render: (name: string | null) => name ?? '—',
+      },
+      {
+        title: '认证 ID',
+        dataIndex: 'id',
+        width: 150,
+        render: (id: string, row) =>
+          row.role === 'admin' ? (
+            '—'
+          ) : (
+            <Typography.Text code copyable={{ tooltips: ['复制', '已复制'] }}>
+              {id}
+            </Typography.Text>
+          ),
       },
       {
         title: 'QQ',
@@ -265,6 +306,13 @@ export function UsersPage() {
             <Select options={ROLE_OPTIONS} placeholder="选择角色" />
           </Form.Item>
           <Form.Item
+            name="department_id"
+            label="所属部门"
+            extra="决定机器人 @通知的工单范围；系统管理员无需选择"
+          >
+            <Select allowClear options={deptOptions} placeholder="选择部门" />
+          </Form.Item>
+          <Form.Item
             name="qq"
             label="QQ"
             rules={[{ pattern: /^\d{5,12}$/, message: 'QQ 号为 5-12 位数字' }]}
@@ -303,6 +351,9 @@ export function UsersPage() {
           </Form.Item>
           <Form.Item name="role" label="角色" rules={[{ required: true, message: '请选择角色' }]}>
             <Select options={ROLE_OPTIONS} />
+          </Form.Item>
+          <Form.Item name="department_id" label="所属部门" extra="决定机器人 @通知的工单范围">
+            <Select allowClear options={deptOptions} placeholder="选择部门" />
           </Form.Item>
           <Form.Item
             name="qq"

@@ -10,11 +10,12 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   NotificationOutlined,
+  RobotOutlined,
   SettingOutlined,
   SolutionOutlined,
   TeamOutlined,
 } from '@ant-design/icons';
-import { Avatar, Tooltip } from 'antd';
+import { App, Avatar, Tooltip } from 'antd';
 import { ROLE_LABELS, type StaffRole } from '@sr/shared';
 import { useAuth } from '../auth/AuthContext';
 import { canManage, canPlatform, canReview } from '../roles';
@@ -27,6 +28,7 @@ interface NavItem {
 }
 
 export function AdminLayout() {
+  const { message } = App.useApp();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -41,6 +43,7 @@ export function AdminLayout() {
       { path: '/rules', label: '规则配置', icon: <AuditOutlined />, allowed: canManage(role) },
       { path: '/announcements', label: '公告管理', icon: <NotificationOutlined />, allowed: canManage(role) },
       { path: '/appeals', label: '申诉处理', icon: <SolutionOutlined />, allowed: canManage(role) },
+      { path: '/robot', label: '机器人管理', icon: <RobotOutlined />, allowed: canManage(role) },
       { path: '/users', label: '人员管理', icon: <TeamOutlined />, allowed: canPlatform(role) },
       { path: '/audit-logs', label: '审计日志', icon: <FileSearchOutlined />, allowed: canPlatform(role) },
       { path: '/config', label: '系统配置', icon: <SettingOutlined />, allowed: canPlatform(role) },
@@ -98,6 +101,27 @@ export function AdminLayout() {
               {user?.name?.slice(0, 1) ?? '?'}
             </Avatar>
             <span className="admin-header__name">{user?.name}</span>
+            {user && user.role !== 'admin' && (
+              <Tooltip title="在 QQ 群内 @审核机器人 并发送该认证 ID，即可完成机器人绑定">
+                <button
+                  type="button"
+                  className="admin-header__auth-id"
+                  onClick={() => {
+                    // 后台常以 http://<IP>:5174 访问，非安全上下文下 clipboard 不可用，不能谎报成功
+                    if (!navigator.clipboard) {
+                      message.warning('当前环境不支持自动复制，请手动选中复制');
+                      return;
+                    }
+                    navigator.clipboard.writeText(user.id).then(
+                      () => message.success('认证 ID 已复制'),
+                      () => message.warning('复制失败，请手动选中复制'),
+                    );
+                  }}
+                >
+                  {user.id}
+                </button>
+              </Tooltip>
+            )}
             <Tooltip title={user ? ROLE_LABELS[user.role] : ''}>
               <span className={`admin-role admin-role--${user?.role ?? 'reviewer'}`}>
                 {user ? ROLE_LABELS[user.role] : ''}

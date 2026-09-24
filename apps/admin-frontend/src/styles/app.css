@@ -1027,6 +1027,64 @@
   gap: 0 16px;
 }
 
+.config-switch {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.config-switch__hint {
+  font-size: 12.5px;
+  color: var(--sr-text-low);
+  letter-spacing: 0.02em;
+}
+
+/* —— 机器人管理：页头认证 ID 与消息日志 —— */
+.admin-header__auth-id {
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(224, 184, 102, 0.28);
+  background: rgba(224, 184, 102, 0.08);
+  color: var(--sr-gold);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: border-color var(--sr-dur-fast) var(--sr-ease),
+    background var(--sr-dur-fast) var(--sr-ease);
+}
+
+.admin-header__auth-id:hover {
+  border-color: rgba(224, 184, 102, 0.5);
+  background: rgba(224, 184, 102, 0.14);
+}
+
+.robot-msg__content {
+  display: block;
+  padding: 4px 0;
+  color: var(--sr-text-mid);
+  font-size: 12.5px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.robot-msg__error {
+  display: block;
+  margin-top: 4px;
+  color: rgb(232 122 122);
+  font-size: 12px;
+}
+
+/* 未发送（无接收人）的说明：只是提示，不用失败色 */
+.robot-msg__note {
+  display: block;
+  margin-top: 4px;
+  color: var(--sr-text-low);
+  font-size: 12px;
+}
+
 /* —— 响应式 —— */
 @media (max-width: 1080px) {
   .detail-grid {
