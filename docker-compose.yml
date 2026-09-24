@@ -14,6 +14,14 @@ services:
       JWT_SECRET: ${JWT_SECRET:?请先复制 .env.example 为 .env 并设置 JWT_SECRET}
       SR_DATA_DIR: /data
       SR_STORAGE_DIR: /storage
+      # QQ 机器人（选填）：三项齐备才真正投递消息，缺失时只记消息日志
+      QQ_BOT_APPID: ${QQ_BOT_APPID:-}
+      QQ_BOT_SECRET: ${QQ_BOT_SECRET:-}
+      QQ_BOT_TOKEN: ${QQ_BOT_TOKEN:-}
+      QQ_BOT_SANDBOX: ${QQ_BOT_SANDBOX:-false}
+      # 机器人消息里的按钮链接指向的外部站点地址（公网域名或 IP:端口）
+      PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:-http://localhost:5173}
+      ADMIN_SITE_URL: ${ADMIN_SITE_URL:-http://localhost:5174}
     volumes:
       - api-data:/data
       - api-storage:/storage
