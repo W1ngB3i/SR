@@ -43,9 +43,11 @@ docker compose up -d --build
 ### 2.2 验证
 
 ```bash
-docker compose ps                              # 四个服务均 Up（api 为 healthy）
-curl -s http://localhost:5173/api/healthz     # 返回 {"ok":true,...}
+docker compose ps                              # 四个服务均 Up（api 为 healthy，探针走容器内 /healthz）
+curl -s http://localhost:5173/api/v1/public/rules | head -c 200   # 经前端 nginx 反代到 API
 ```
+
+说明：`/healthz` 挂在 API 根路径、仅容器内可达（8787 未对宿主机开放），因此对外验证请调用任意业务接口。
 
 浏览器访问 `http://<服务器IP>:5173`（用户端）与 `http://<服务器IP>:5174`（管理后台）。
 
