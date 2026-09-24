@@ -14,7 +14,7 @@ import {
 } from 'antd';
 import type { SelectProps } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ATTACHMENT_KIND_RULES,
   BizCode,
@@ -41,6 +41,7 @@ const ACCEPT = [
 export function SubmitPage() {
   const { message } = AntApp.useApp();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [form] = Form.useForm<SubmitTicketInput>();
   const [bundle, setBundle] = useState<RulesBundleDTO | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -77,6 +78,12 @@ export function SubmitPage() {
       });
     }
   }, [result]);
+
+  // 机器人消息里的「去申请」按钮会带上 ?code=，自动预填接洽码
+  useEffect(() => {
+    const code = searchParams.get('code');
+    if (code) form.setFieldValue('contact', code.trim().toUpperCase());
+  }, [searchParams, form]);
 
   const departmentId = Form.useWatch('department_id', form);
   const selectedDept = useMemo<DepartmentDTO | undefined>(
@@ -211,7 +218,7 @@ export function SubmitPage() {
       <div className="page-hero__eyebrow">Submit</div>
       <h1 className="page-hero__title">提交审核申请</h1>
       <p className="page-hero__desc">
-        向审核员索取一次性接洽码后，填写圈名、选择目标部门与审核模式并上传证据材料。提交后系统生成唯一查询码，凭「圈名 + 查询码」随时查询进度。
+        在 QQ 群内 @审核机器人 发送「拿接洽码」领取一次性接洽码（也可向审核员索取），随后填写圈名、选择目标部门与审核模式并上传证据材料。提交后系统生成唯一查询码，凭「圈名 + 查询码」随时查询进度。
       </p>
 
       <GlassCard tone="strong" className="form-card">
@@ -249,9 +256,9 @@ export function SubmitPage() {
               { required: true, message: '请填写接洽码' },
               { pattern: /^[A-Z2-9]{6}$/, message: '接洽码为 6 位大写字母或数字' },
             ]}
-            extra="接洽码由审核员生成并一次性使用，请通过 QQ 向审核员索取"
+            extra="一次性使用：可在 QQ 群内 @审核机器人 发送「拿接洽码」自助领取，或向审核员索取"
           >
-            <Input placeholder="向审核员索取，如 AB2CDE" maxLength={6} showCount />
+            <Input placeholder="如 AB2CDE" maxLength={6} showCount />
           </Form.Item>
 
           <div className="form-card__section-title">审核目标</div>
