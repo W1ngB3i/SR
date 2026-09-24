@@ -66,6 +66,10 @@ docker compose up -d --build
 | `SR_DATA_DIR` | `apps/api/data` | 数据库与 JWT 密钥目录 |
 | `SR_STORAGE_DIR` | `apps/api/storage` | 证据文件落盘目录 |
 | `JWT_SECRET` | 自动生成并持久化 | **生产必须显式指定**（`NODE_ENV=production` 时未注入会拒绝启动） |
+| `QQ_BOT_APPID` / `QQ_BOT_SECRET` / `QQ_BOT_TOKEN` | 空 | QQ 机器人凭据；三项齐备才真正投递消息，任一缺失时只记消息日志 |
+| `QQ_BOT_SANDBOX` | `false` | 机器人开放接口是否走沙箱域名 |
+| `PUBLIC_SITE_URL` | `http://localhost:5173` | 机器人按钮「去申请 / 查看结果」指向的外部地址 |
+| `ADMIN_SITE_URL` | `http://localhost:5174` | 机器人按钮「去接单」指向的外部地址 |
 
 种子账号（口令统一 `sr123456`，**上线后立即修改**）：
 
@@ -84,7 +88,7 @@ npx pnpm -C apps/api dev    # API：8787（tsx watch）
 npx pnpm -C apps/user-frontend dev    # 用户端：5173
 npx pnpm -C apps/admin-frontend dev    # 管理端：5174
 pnpm -r typecheck           # 全仓类型检查
-pnpm -r test                # shared + api 单测（23 例）
+pnpm -r test                # shared + api 单测（45 例）
 pnpm -C e2e test            # E2E 主链路（Playwright，独立实例，不污染本地数据）
 ```
 
@@ -118,7 +122,9 @@ API 侧用 `schema.safeParse` 做入参校验并将 zod issue 转为 `FIELD_REQU
 
 ### 3.3 数据模型（SQLite，`apps/api/src/db/schema.sql`）
 
-`user`（账号与角色）、`department` / `mode`（部门与审核模式，级联约束删除）、`ticket`（工单主体 + 查询码 + 冷却判定字段）、`ticket_event`（流转事件，时间线数据源）、`receipt`（回执：PE / PC 成绩、是否通过、去向部门、评语、草稿态）、`attachment`（证据：kind = image / video / other）、`appeal`（申诉：凭圈名 + 查询码提交，总管 / 副总管采纳或驳回）、`contact_key`（一次性接洽码：审核员生成、提单事务内原子消耗）、`announcement`（公告，置顶与过期）、`audit_log`（后台操作审计，before / after JSON）、`config`（系统配置 K/V）。
+`user`（账号与角色 + 所属部门 `department_id`，兼作机器人认证 ID 的来源）、`department` / `mode`（部门与审核模式，级联约束删除）、`ticket`（工单主体 + 查询码 + 冷却判定字段）、`ticket_event`（流转事件，时间线数据源）、`receipt`（回执：PE / PC 成绩、是否通过、去向部门、评语、草稿态）、`attachment`（证据：kind = image / video / other）、`appeal`（申诉：凭圈名 + 查询码提交，总管 / 副总管采纳或驳回）、`contact_key`（一次性接洽码：审核员生成或机器人签发，提单事务内原子消耗；`bind_openid` / `bound_at` / `guild_id` 记录机器人绑定与取码所在群，用于提交校验和结果推送）、`robot_identities`（QQ 身份绑定：openid ↔ 角色 / 部门 / 账号）、`robot_message`（机器人收发消息日志，含失败原因供重发）、`announcement`（公告，置顶与过期）、`audit_log`（后台操作审计，before / after JSON）、`config`（系统配置 K/V）。
+
+历史库升级由 `apps/api/src/db/index.ts` 的 `migrate()` 幂等补齐新增列（含 `contact_key.created_by` 放开 NOT NULL）。
 
 ### 3.4 工单状态机
 
@@ -141,6 +147,7 @@ release：reviewing / supplementing ─▶ pending_claim
 | 工单池 / 接单 / 回执 / 退回补充 | ✅ | ✅ | ✅ | ❌ |
 | 指派 / 释放 / 置顶 / 复核 / 公示 | ❌ | ✅ | ✅ | ❌ |
 | 规则配置 / 公告管理 | ❌ | ✅ | ✅ | ❌ |
+| 机器人管理（身份绑定 / 接洽码 / 消息日志） | ❌ | ✅ | ✅ | ❌ |
 | 仪表盘 / 人员 / 审计 / 系统配置 | ❌ | ✅ | ✅ | ✅ |
 
 **总管 / 副总管全权通道**（放开跨工单干预，全部写审计日志）：
@@ -164,6 +171,9 @@ release：reviewing / supplementing ─▶ pending_claim
 - 工单（登录）：`GET /tickets`（tab=待接单/我的在办/全部 + 筛选）、`GET /tickets/assignables`、`GET /tickets/:id`、`POST /tickets/:id/{claim,assign,release,pin,supplement-request,review,publish}`、`PUT /tickets/:id/receipt`、`PUT /tickets/:id/info`（总管/副总管修订基础信息）、`POST /tickets/:id/unpublish`（撤销公示）、`DELETE /tickets/:id`（删除）
 - 接洽码（登录，审核系角色）：`GET /contact-keys`（我的生成记录）、`POST /contact-keys`（生成一次性接洽码，提单时原子消耗）
 - 管理：`/admin/departments|modes|users|announcements|appeals|audit-logs|stats|config` CRUD 与读
+- 机器人（见 3.10）：
+  - 平台回调（无版本前缀、无鉴权但强制验签）：`POST /api/robot/webhook`
+  - 管理（总管 / 副总管）：`GET /admin/robot-status`、`GET|POST /admin/robot-identities`、`PUT|DELETE /admin/robot-identities/:openid`、`GET /admin/robot-messages`（支持 `status` / `kind` 筛选与分页）、`POST /admin/robot-messages/:id/resend`、`GET /admin/contact-keys`（`bound=bound|unbound`）
 
 ### 3.7 前端约定
 
@@ -178,6 +188,7 @@ release：reviewing / supplementing ─▶ pending_claim
 2. shared 改动未重建 dist 时，下游会报「无此导出」——先 `npx pnpm -C packages/shared build`。
 3. `db:reset` 会清空 `sr-review.db` 并重置为种子态（6 账号 / 8 部门 / 31 模式 / 10 演示工单）。已有数据的库升级目录用 `db:sync-catalog`（幂等，不动账号与工单）。
 4. 上传限制（扩展名白名单、单文件 200MB、每单 6 个）与提交冷却在「系统配置」页可调，实时生效。
+5. `config.robot_require_bound_key` 默认 `false`：机器人接管入口后由总管在「系统配置 → 接洽码绑定」开启，届时只有机器人签发（已绑定 QQ）的接洽码才能提单，后台手工发码流程仍可保留。
 
 ### 3.9 E2E 主链路测试（`e2e/`）
 
@@ -187,3 +198,26 @@ Playwright 单条主链路用例：**生成接洽码 → 提交工单 → 总管
 - **端口可调**：环境变量 `SR_E2E_API_PORT` / `SR_E2E_USER_PORT` / `SR_E2E_ADMIN_PORT`；本地开发服务的端口/代理也可用 `SR_PORT` / `SR_API_TARGET` 注入。
 - **首次运行**需安装浏览器：`pnpm -C e2e exec playwright install chromium`。
 - CI 中为独立 job（`.github/workflows/ci.yml`），失败时上传 HTML 报告产物。
+
+### 3.10 QQ 机器人双端接入
+
+设计原则：**机器人只做触发与通知，表单填写与审核操作始终在网站端完成**。机器人未配置凭据时不投递、只记日志，因此本地开发与单测完全不受影响。
+
+**两条入口**
+
+1. 申请人：在 QQ 群内 @机器人 发送「拿接洽码」（也可发「申请码 / 要码」等）→ 机器人签发一次性接洽码并绑定其 openid，回复带「去申请」按钮（`PUBLIC_SITE_URL/apply?code=XXX`，用户端自动预填接洽码）。
+2. 审核员：在管理后台右上角复制自己的**认证 ID**（即 `user.id`），在群里 @机器人 发送该 ID → 绑定为对应角色与部门，新工单自动 @该部门审核员。
+
+**链路**
+
+- `POST /api/robot/webhook` 处理 QQ 平台回调：**强制 Ed25519 验签，未配置 `QQ_BOT_SECRET` 时直接 503 拒绝**（接口经前端 nginx 对公网可达，不给未验签请求留口子）；`op:13` 回调地址验证用 Ed25519 应答（Bot Secret 循环填充 32 字节作种子）；`op:0` 事件仅处理 `GROUP_AT_MESSAGE_CREATE` / `C2C_MESSAGE_CREATE`，**先立即返回 200 再异步处理**（平台要求 5 秒内响应）。
+- 出站消息：群聊的发送路径参数是**群 openid**（`POST /v2/groups/{group_openid}/messages`），@ 成员只能写在 `content` 里（`<qqbot-at-user id="openid" />`，旧的 `<@openid>` 协议平台已标注即将弃用）。对入站消息用 `msg_id` 做被动回复、用 `msg_seq` 区分同一条消息的多条回复。
+- **主动消息配额**：工单创建 / 公示通知发生在交互窗口（群聊 5 分钟）之外，属主动消息，受平台配额约束（每个群每月 4 条），且需群主在群设置中开启「机器人主动在群聊内发言」，否则发送失败并记入「消息日志」。运营侧注意事项见 [DEPLOYMENT.md](./DEPLOYMENT.md) 第 9 节。
+- 工单创建 → 按 `robot_identities.dept_id` 匹配该部门审核员并 @（附「去接单」按钮）；工单公示 → 通过 `contact_key.used_ticket_id` 反查申请人 openid 并推送结果（附「查看结果」按钮）。
+- 所有收发消息落 `robot_message`；发送失败记录原因，可在「机器人管理 → 消息日志」一键重发。
+
+**实现要点**
+
+- Ed25519 签名 / AccessToken 缓存 / 消息发送在 `apps/api/src/services/qq.ts`；身份绑定、接洽码签发、入站处理与通知在 `services/robot.ts`；接洽码签发与反查在 `services/key.ts`。
+- 审核员绑定采用「直接发后台认证 ID」，本期不做 OAuth 式的 openid 扫码绑定，也不做机器人侧的表单填写。
+- 后台「机器人管理」页三块：身份绑定（可手工增删改）、接洽码绑定状态（筛选已绑定 / 未绑定）、消息日志（筛选 + 重发）。
