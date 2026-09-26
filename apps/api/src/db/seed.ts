@@ -3,6 +3,7 @@ import { getDb } from './index.js';
 import { CATALOG_DEPARTMENTS, CATALOG_MODES } from './catalog.js';
 import { newId, nowIso } from '../lib/ids.js';
 import { hashPassword } from '../lib/password.js';
+import { IS_PRODUCTION } from '../env.js';
 
 function hoursAgo(h: number): string {
   return new Date(Date.now() - h * 3_600_000).toISOString();
@@ -115,28 +116,43 @@ function insertEvent(db: ReturnType<typeof getDb>, ticketId: string, type: strin
   ).run(newId('evt'), ticketId, type, actorName, detail, at);
 }
 
-/** 灌入种子数据：force 时先清空业务表 */
-export function seedDatabase(force: boolean): void {
+/** 清空全部业务表：按外键依赖顺序删除（force 重建用） */
+function wipeAll(db: ReturnType<typeof getDb>): void {
+  db.prepare('DELETE FROM attachment').run();
+  db.prepare('DELETE FROM receipt').run();
+  db.prepare('DELETE FROM ticket_event').run();
+  db.prepare('DELETE FROM ticket').run();
+  db.prepare('DELETE FROM mode').run();
+  db.prepare('DELETE FROM department').run();
+  db.prepare('DELETE FROM announcement').run();
+  db.prepare('DELETE FROM audit_log').run();
+  db.prepare('DELETE FROM config').run();
+  db.prepare('DELETE FROM "user"').run();
+}
+
+/** 清空工单相关表：只动工单及其从属记录，保留账号与目录 */
+function wipeTickets(db: ReturnType<typeof getDb>): void {
+  db.prepare('DELETE FROM attachment').run();
+  db.prepare('DELETE FROM receipt').run();
+  db.prepare('DELETE FROM ticket_event').run();
+  db.prepare('DELETE FROM ticket').run();
+  db.prepare('DELETE FROM audit_log').run();
+}
+
+/**
+ * 基础数据：账号 / 部门 / 审核模式 / 平台配置 / 公告。
+ * 生产环境首次启动只灌这一段——都是真实业务内容，不含任何演示工单。
+ */
+export function seedBase(force = false): void {
   const db = getDb();
   const userCount = (db.prepare('SELECT COUNT(*) AS c FROM "user"').get() as { c: number }).c;
   if (userCount > 0 && !force) {
-    console.log('[seed] 数据库已有数据，跳过种子（使用 --force 覆盖）');
+    console.log('[seed] 数据库已有账号，跳过基础数据（使用 --force 覆盖）');
     return;
   }
 
-  const seed = db.transaction(() => {
-    if (force) {
-      db.prepare('DELETE FROM attachment').run();
-      db.prepare('DELETE FROM receipt').run();
-      db.prepare('DELETE FROM ticket_event').run();
-      db.prepare('DELETE FROM ticket').run();
-      db.prepare('DELETE FROM mode').run();
-      db.prepare('DELETE FROM department').run();
-      db.prepare('DELETE FROM announcement').run();
-      db.prepare('DELETE FROM audit_log').run();
-      db.prepare('DELETE FROM config').run();
-      db.prepare('DELETE FROM "user"').run();
-    }
+  db.transaction(() => {
+    if (force) wipeAll(db);
 
     const pwHash = hashPassword('sr123456');
     const userInsert = db.prepare(
@@ -202,7 +218,7 @@ export function seedDatabase(force: boolean): void {
     annInsert.run(
       newId('ann'),
       '关于审核难度标准（2023.12 起生效）',
-      `设备界定：${DEVICE_NOTES[0]}${DEVICE_NOTES[1]}部门难度：总部 B+ Tier（单公会）；SR_Team 布吉岛&JAVA 部门政审（联系 1104546892）；SR_Team 精刀小组 B- Tier；SR_Party EC&国际部门 C+ Tier；SR_Group 联机大厅部门 C+ Tier；SR_Arrow 生存部门 B-；SR_Explore 开拓部门政审（联系 323992228）。JAVA 高版本 Crystals 审核最低要求 ht4。`,
+      `设备界定：${DEVICE_NOTES[0]}。${DEVICE_NOTES[1]}。部门难度：总部 B+ Tier（单公会）；SR_Team 布吉岛&JAVA 部门政审（联系 1104546892）；SR_Team 精刀小组 B- Tier；SR_Party EC&国际部门 C+ Tier；SR_Group 联机大厅部门 C+ Tier；SR_Arrow 生存部门 B-；SR_Explore 开拓部门政审（联系 323992228）。JAVA 高版本 Crystals 审核最低要求 ht4。`,
       1,
       '望北',
       hoursAgo(24 * 14),
@@ -215,6 +231,30 @@ export function seedDatabase(force: boolean): void {
       '雨夜',
       hoursAgo(24 * 5),
     );
+  })();
+
+  console.log(`[seed] 基础数据完成：${USERS.length} 个账号、${CATALOG_DEPARTMENTS.length} 个部门、${CATALOG_MODES.length} 个模式`);
+  if (IS_PRODUCTION) {
+    console.warn('[seed] 初始口令为默认值 sr123456，请登录后立即修改');
+  } else {
+    console.log('[seed] 演示账号口令统一为 sr123456（wangbei / yuye / xingchen / liuyun / beian / admin）');
+  }
+}
+
+/**
+ * 演示工单：覆盖待接单 / 审核中 / 补充中 / 已出结果 / 已公示各状态的样例。
+ * 只服务本地开发与测试，生产环境不灌入，避免脏数据影响统计口径与公示墙。
+ */
+export function seedDemoTickets(force = false): void {
+  const db = getDb();
+  const ticketCount = (db.prepare('SELECT COUNT(*) AS c FROM ticket').get() as { c: number }).c;
+  if (ticketCount > 0 && !force) {
+    console.log('[seed] 数据库已有工单，跳过演示工单（使用 --force 覆盖）');
+    return;
+  }
+
+  db.transaction(() => {
+    if (force) wipeTickets(db);
 
     const ticketInsert = db.prepare(
       `INSERT INTO ticket (id, query_code, circle_name, department_id, module, mode_id, self_proof, contact, status, assignee_id, is_priority, supplement_reason, created_at, updated_at, claimed_at, resulted_at, published_at)
@@ -273,9 +313,13 @@ export function seedDatabase(force: boolean): void {
       }
       auditInsert.run(newId('log'), t.id, created);
     }
-  });
+  })();
 
-  seed();
-  console.log(`[seed] 完成：${USERS.length} 个账号、${CATALOG_DEPARTMENTS.length} 个部门、${CATALOG_MODES.length} 个模式、${DEMO_TICKETS.length} 条演示工单`);
-  console.log('[seed] 演示账号口令统一为 sr123456（wangbei / yuye / xingchen / liuyun / beian / admin）');
+  console.log(`[seed] 演示工单完成：${DEMO_TICKETS.length} 条`);
+}
+
+/** 本地开发与测试：一次灌入基础数据与演示工单 */
+export function seedDatabase(force: boolean): void {
+  seedBase(force);
+  seedDemoTickets(force);
 }

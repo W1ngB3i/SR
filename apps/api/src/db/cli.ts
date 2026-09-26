@@ -25,5 +25,6 @@ if (command === 'reset') {
   syncCatalog();
 } else {
   console.log('用法：tsx src/db/cli.ts <reset|seed|sync-catalog> [--force]');
+  console.log('  reset / seed 会灌入演示工单，仅用于本地开发；生产首次启动只灌账号、目录与公告');
   process.exit(1);
 }

@@ -25,8 +25,8 @@ pnpm install
 # 2. 构建（按拓扑序编译 shared → api → ui → 两个前端）
 pnpm -r build
 
-# 3. 初始化数据库并写入种子数据（演示部门 / 模式 / 账号）
-npx pnpm -C apps/api db:reset
+# 3. 数据库无需手工初始化：首次启动 API 会自动灌入账号 / 部门 / 审核模式 / 配置 / 公告
+#    （演示工单只在非生产环境灌入；db:reset / db:seed 会写入演示工单，仅限本地开发使用）
 
 # 4. 启动 API（默认 8787；生产必须显式注入 JWT_SECRET）
 JWT_SECRET=$(openssl rand -base64 48) node apps/api/dist/server.js
@@ -186,7 +186,7 @@ release：reviewing / supplementing ─▶ pending_claim
 
 1. **不要用 `pnpm install --filter <pkg>`**：hoisted 模式下会剪掉其它包依赖并留下失效 `.bin` 垫片；装包一律全量 `pnpm install`。
 2. shared 改动未重建 dist 时，下游会报「无此导出」——先 `npx pnpm -C packages/shared build`。
-3. `db:reset` 会清空 `sr-review.db` 并重置为种子态（6 账号 / 8 部门 / 31 模式 / 10 演示工单）。已有数据的库升级目录用 `db:sync-catalog`（幂等，不动账号与工单）。
+3. `db:reset` 会清空 `sr-review.db` 并重置为种子态（6 账号 / 8 部门 / 31 模式 / 10 演示工单），仅限本地开发使用；生产首次启动只灌基础数据（账号 / 目录 / 配置 / 公告），不含演示工单。已有数据的库升级目录用 `db:sync-catalog`（幂等，不动账号与工单）。
 4. 上传限制（扩展名白名单、单文件 200MB、每单 6 个）与提交冷却在「系统配置」页可调，实时生效。
 5. `config.robot_require_bound_key` 默认 `false`：机器人接管入口后由总管在「系统配置 → 接洽码绑定」开启，届时只有机器人签发（已绑定 QQ）的接洽码才能提单，后台手工发码流程仍可保留。
 

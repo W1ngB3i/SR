@@ -13,6 +13,9 @@ export const STORAGE_DIR = process.env.SR_STORAGE_DIR ?? path.join(API_ROOT, 'st
 
 export const PORT = Number(process.env.PORT ?? 8787);
 
+/** 生产环境标志（docker compose 中显式注入 NODE_ENV=production） */
+export const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
 export const DB_PATH = path.join(DATA_DIR, 'sr-review.db');
 
 /**
@@ -22,7 +25,7 @@ export const DB_PATH = path.join(DATA_DIR, 'sr-review.db');
 export const JWT_SECRET: string = (() => {
   if (process.env.JWT_SECRET) return process.env.JWT_SECRET;
   // 生产环境必须显式注入密钥，避免密钥随数据目录漂移或被遗漏轮换
-  if (process.env.NODE_ENV === 'production') {
+  if (IS_PRODUCTION) {
     throw new Error('生产环境必须通过环境变量 JWT_SECRET 显式注入 JWT 密钥');
   }
   const secretFile = path.join(DATA_DIR, 'jwt-secret');

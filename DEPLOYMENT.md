@@ -70,8 +70,8 @@ git clone <仓库地址> sr-review && cd sr-review
 pnpm install          # 全量安装（禁止 --filter，详见 README 工程注意点）
 pnpm -r build         # 按拓扑序编译 shared → api → ui → 前端
 
-# 初始化数据库（含演示数据；对已有库执行会清空全部数据，慎用）
-npx pnpm -C apps/api db:reset
+# 数据库无需手工初始化：首次启动 API 会自动灌入账号 / 部门 / 审核模式 / 配置 / 公告
+# （生产不灌演示工单；db:reset / db:seed 会写入演示工单且清空已有数据，仅在本地开发使用）
 ```
 
 ### 3.2 用 systemd 托管 API
@@ -121,6 +121,8 @@ server {
 
 ## 4. 部署后初始化清单
 
+首次启动会自动灌入账号、部门目录、审核模式、平台配置与公告（**不含演示工单**，生产库干净）。
+
 1. 用种子账号登录管理后台（5174，口令统一 `sr123456`），**立即修改口令**：
    `wangbei`（总管）、`yuye`（副总管）、`admin`（系统管理员）等。
 2. 「人员管理」创建正式审核员账号，提醒其首次登录后修改口令。
@@ -155,7 +157,7 @@ npx pnpm -C apps/api db:sync-catalog
 
 - 表结构随 API 启动自动补齐（`CREATE TABLE IF NOT EXISTS`），**无需手工执行 SQL**。
 - `sync-catalog` 只更新 `department` / `mode` 目录并停用旧部门，不改动账号、工单与回执；执行前建议先备份。
-- 全新部署无需执行（`db:reset` 已写入最新目录）。
+- 全新部署无需执行（首次启动已写入最新目录）。
 
 ## 6. 备份与恢复
 
