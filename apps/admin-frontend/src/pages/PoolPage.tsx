@@ -114,7 +114,7 @@ export function PoolPage() {
       content: (
         <div style={{ marginTop: 12 }}>
           <p style={{ color: '#6d7890', marginBottom: 8, fontSize: 13 }}>
-            释放后工单回到公单池，其他审核员可以接手。
+            释放后工单回到公单池，其他审核员可以接手
           </p>
           <Input.TextArea
             rows={3}
@@ -291,7 +291,7 @@ export function PoolPage() {
       <div className="page-hero">
         <h1 className="page-hero__title">工单池</h1>
         <p className="page-hero__desc">
-          待接单工单先到先得；{isManager ? '总管可指派、释放与置顶。' : '接单后进入「我的在办」处理。'}
+          待接单工单先到先得；{isManager ? '总管可指派、释放与置顶' : '接单后进入「我的在办」处理'}
         </p>
       </div>
 
@@ -349,6 +349,7 @@ export function PoolPage() {
           columns={columns}
           dataSource={data?.items ?? []}
           loading={loading}
+          scroll={{ x: 900 }}
           pagination={{
             current: page,
             pageSize: PAGE_SIZE,
@@ -376,7 +377,7 @@ export function PoolPage() {
         destroyOnHidden
       >
         <p style={{ marginBottom: 12, color: '#6d7890', fontSize: 13 }}>
-          指派后工单直接进入该审核员的「我的在办」；括号内为特长标注，供指派参考。
+          指派后工单直接进入该审核员的「我的在办」；括号内为特长标注，供指派参考
         </p>
         <Select
           style={{ width: '100%' }}
