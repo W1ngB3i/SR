@@ -69,7 +69,7 @@ export function RulesPage() {
       <div className="page-hero__eyebrow">Rules</div>
       <h1 className="page-hero__title">审核规则</h1>
       <p className="page-hero__desc">
-        各部门审核模式、设备界定与等级阶梯一览。规则以本页与提交表单中的实时数据为准，配置中心变更后自动生效。
+        各部门审核模式、设备界定与等级阶梯一览。规则以本页与提交表单中的实时数据为准，配置中心变更后自动生效
       </p>
 
       <div className="rules-departments" ref={listRef}>
@@ -125,7 +125,7 @@ export function RulesPage() {
               lineHeight: 1.8,
             }}
           >
-            自 E 至 S+ 逐级抬升，双端（PE / PC）分别评级；具体标准以群管家口径为准。
+            自 E 至 S+ 逐级抬升，双端（PE / PC）分别评级；具体标准以群管家口径为准
           </p>
         </GlassCard>
       </div>

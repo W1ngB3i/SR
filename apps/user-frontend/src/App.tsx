@@ -43,7 +43,7 @@ function NotFound() {
   return (
     <div className="page-hero">
       <h1 className="page-hero__title">页面不存在</h1>
-      <p className="page-hero__desc">请从顶部导航返回正确的页面。</p>
+      <p className="page-hero__desc">请从顶部导航返回正确的页面</p>
     </div>
   );
 }

@@ -56,8 +56,8 @@ export function AppealsPage() {
         <div style={{ marginTop: 12 }}>
           <p style={{ color: '#6d7890', marginBottom: 8, fontSize: 13 }}>
             {action === 'resolve'
-              ? '采纳后请根据实际情况修订工单回执或重新走审核流程。'
-              : '驳回后申诉记录保留，申请人可再次提交新的申诉。'}
+              ? '采纳后请根据实际情况修订工单回执或重新走审核流程'
+              : '驳回后申诉记录保留，申请人可再次提交新的申诉'}
           </p>
           <Input.TextArea
             rows={3}
@@ -172,7 +172,7 @@ export function AppealsPage() {
       <div className="page-hero">
         <h1 className="page-hero__title">申诉处理</h1>
         <p className="page-hero__desc">
-          申请人对审核结果有异议时提交的申诉记录，由总管/副总管采纳或驳回。
+          申请人对审核结果有异议时提交的申诉记录，由总管/副总管采纳或驳回
         </p>
       </div>
 

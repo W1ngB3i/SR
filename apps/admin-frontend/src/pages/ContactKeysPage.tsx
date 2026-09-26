@@ -38,7 +38,7 @@ export function ContactKeysPage() {
         content: (
           <div className="contact-key-modal">
             <p className="contact-key-modal__hint">
-              请通过 QQ 面对面将该接洽码交给被审核的人，由对方填入申请表「接洽码」栏。每个接洽码只能使用一次。
+              请通过 QQ 面对面将该接洽码交给被审核的人，由对方填入申请表「接洽码」栏。每个接洽码只能使用一次
             </p>
             <div className="contact-key-modal__code">{key.code}</div>
           </div>
@@ -80,7 +80,7 @@ export function ContactKeysPage() {
       <div className="page-hero">
         <h1 className="page-hero__title">接洽码</h1>
         <p className="page-hero__desc">
-          生成一次性接洽码后，通过 QQ 面对面交付被审核的人；对方将其填入申请表「接洽码」栏即可提交工单。
+          生成一次性接洽码后，通过 QQ 面对面交付被审核的人；对方将其填入申请表「接洽码」栏即可提交工单
         </p>
       </div>
 
@@ -89,7 +89,7 @@ export function ContactKeysPage() {
           <Button type="primary" icon={<KeyOutlined />} loading={generating} onClick={() => void handleGenerate()}>
             生成接洽码
           </Button>
-          <span className="contact-keys-toolbar__hint">每个接洽码仅可使用一次，使用后自动作废。</span>
+          <span className="contact-keys-toolbar__hint">每个接洽码仅可使用一次，使用后自动作废</span>
         </div>
 
         <Table<ContactKeyDTO>

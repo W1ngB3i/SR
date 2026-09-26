@@ -51,7 +51,7 @@ export function StatsPage() {
     <div className="stats-page">
       <div className="page-hero">
         <h1 className="page-hero__title">仪表盘</h1>
-        <p className="page-hero__desc">你好，{user?.name}。这里是审核平台的实时概览。</p>
+        <p className="page-hero__desc">你好，{user?.name}。这里是审核平台的实时概览</p>
       </div>
 
       <div className="stats-status">

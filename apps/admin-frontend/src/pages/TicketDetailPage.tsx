@@ -198,7 +198,7 @@ export function TicketDetailPage() {
       content: (
         <div style={{ marginTop: 12 }}>
           <p style={{ color: '#6d7890', marginBottom: 8, fontSize: 13 }}>
-            工单将回到申请人侧，由其在「进度查询」页上传补充材料。
+            工单将回到申请人侧，由其在「进度查询」页上传补充材料
           </p>
           <Input.TextArea
             rows={3}
@@ -247,7 +247,7 @@ export function TicketDetailPage() {
         title: '复核通过并公示',
         content: (
           <p style={{ marginTop: 12, color: '#6d7890', fontSize: 13 }}>
-            通过后回执内容将脱敏进入「结果公示」页，向全公会公开。
+            通过后回执内容将脱敏进入「结果公示」页，向全公会公开
           </p>
         ),
         okText: '确认公示',
@@ -260,7 +260,7 @@ export function TicketDetailPage() {
         content: (
           <div style={{ marginTop: 12 }}>
             <p style={{ color: '#6d7890', marginBottom: 8, fontSize: 13 }}>
-              退回后回执转为草稿，由负责审核员修改后重新提交。
+              退回后回执转为草稿，由负责审核员修改后重新提交
             </p>
             <Input.TextArea
               rows={3}
@@ -403,7 +403,7 @@ export function TicketDetailPage() {
             {detail.status === 'published' && (
               <Popconfirm
                 title="撤销公示"
-                description="工单将回到「已出结果」，可修订回执后重新公示。"
+                description="工单将回到「已出结果」，可修订回执后重新公示"
                 okText="确认撤销"
                 cancelText="取消"
                 onConfirm={() => void handleUnpublish()}
@@ -495,7 +495,7 @@ export function TicketDetailPage() {
                 className="detail-receipt"
               >
                 {receiptLocked && (
-                  <p className="detail-lock">等待申请人补充材料，回执暂不可编辑。</p>
+                  <p className="detail-lock">等待申请人补充材料，回执暂不可编辑</p>
                 )}
                 <div className="detail-receipt__grades">
                   {needPe && (
@@ -556,10 +556,10 @@ export function TicketDetailPage() {
                 </div>
                 <p className="detail-receipt__hint">
                   {publishedRevision
-                    ? '该工单已公示：保存修订后公示结果即时更新，并记录修订时间线。'
+                    ? '该工单已公示：保存修订后公示结果即时更新，并记录修订时间线'
                     : !isAssignee && isManager
-                      ? '总管/副总管全权模式：可直接代为填写或修订任意工单的回执。'
-                      : '提交后工单进入「已出结果」，由总管复核；复核退回后可在此重填再提交。'}
+                      ? '总管/副总管全权模式：可直接代为填写或修订任意工单的回执'
+                      : '提交后工单进入「已出结果」，由总管复核；复核退回后可在此重填再提交'}
                 </p>
               </Form>
             )}
@@ -595,7 +595,7 @@ export function TicketDetailPage() {
                   <Button onClick={() => void handlePublish()}>直接公示</Button>
                 </div>
                 <p className="detail-review__hint">
-                  「复核通过并公示」与「直接公示」等效：结果将脱敏进入公示页。
+                  「复核通过并公示」与「直接公示」等效：结果将脱敏进入公示页
                 </p>
               </div>
             )}
@@ -622,8 +622,8 @@ export function TicketDetailPage() {
                 ) : (
                   <p className="detail-empty">
                     {detail.status === 'pending_claim'
-                      ? '接单或指派后，由负责审核员填写回执。'
-                      : '回执尚未填写。'}
+                      ? '接单或指派后，由负责审核员填写回执'
+                      : '回执尚未填写'}
                   </p>
                 )}
               </div>

@@ -160,7 +160,7 @@ export function AnnouncementsPage() {
       <div className="page-hero page-hero--row">
         <div>
           <h1 className="page-hero__title">公告管理</h1>
-          <p className="page-hero__desc">公告展示在申请人端「结果公示」页顶部；过期后自动隐藏。</p>
+          <p className="page-hero__desc">公告展示在申请人端「结果公示」页顶部；过期后自动隐藏</p>
         </div>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => open('new')}>
           发布公告

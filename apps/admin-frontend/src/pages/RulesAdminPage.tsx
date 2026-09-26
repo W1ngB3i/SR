@@ -265,7 +265,7 @@ export function RulesAdminPage() {
       <div className="page-hero page-hero--row">
         <div>
           <h1 className="page-hero__title">规则配置中心</h1>
-          <p className="page-hero__desc">部门与审核模式是申请表单和公示的口径来源，修改即时生效。</p>
+          <p className="page-hero__desc">部门与审核模式是申请表单和公示的口径来源，修改即时生效</p>
         </div>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => openDept('new')}>
           新建部门

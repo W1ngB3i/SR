@@ -79,7 +79,7 @@ export function PublishedPage() {
       <div className="page-hero__eyebrow">Published</div>
       <h1 className="page-hero__title">结果公示</h1>
       <p className="page-hero__desc">
-        通过复核的审核结果在此公示。为保护隐私，圈名做脱敏处理，仅展示等级与结论。
+        通过复核的审核结果在此公示。为保护隐私，圈名做脱敏处理，仅展示等级与结论
       </p>
 
       {announcements.length > 0 && (
@@ -183,7 +183,7 @@ export function PublishedPage() {
         <div className="pub-empty" style={{ whiteSpace: 'normal', lineHeight: 1.9 }}>
           公示墙仅展示脱敏结果。如对审核结果有异议，请持提交时的圈名与查询码前往
           <a href="/query" style={{ margin: '0 4px' }}>「进度查询」</a>
-          页提交申诉，申诉由审核总管 / 副总管统一处理并可全程追溯。
+          页提交申诉，申诉由审核总管 / 副总管统一处理并可全程追溯
         </div>
       </GlassCard>
     </div>

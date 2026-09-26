@@ -263,7 +263,7 @@ export function UsersPage() {
         <div>
           <h1 className="page-hero__title">人员管理</h1>
           <p className="page-hero__desc">
-            审核员名单由总管 / 副总管维护；停用账号立即失去登录与接单能力。
+            审核员名单由总管 / 副总管维护；停用账号立即失去登录与接单能力
           </p>
         </div>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreating(true)}>
@@ -369,7 +369,7 @@ export function UsersPage() {
             <Switch checkedChildren="在职" unCheckedChildren="停用" />
           </Form.Item>
           {editing?.id === me?.id && (
-            <p className="rules-form__hint">不能停用自己的账号。</p>
+            <p className="rules-form__hint">不能停用自己的账号</p>
           )}
         </Form>
       </Modal>

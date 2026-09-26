@@ -346,7 +346,7 @@ export function RobotPage() {
           </Button>
           <Popconfirm
             title="删除该绑定？"
-            description="删除后该 QQ 将不再收到工单通知。"
+            description="删除后该 QQ 将不再收到工单通知"
             okText="删除"
             cancelText="取消"
             onConfirm={() => void removeIdentity(row)}
@@ -487,7 +487,7 @@ export function RobotPage() {
         <h1 className="page-hero__title">机器人管理</h1>
         <p className="page-hero__desc">
           QQ 机器人只做触发与通知：玩家在群里 @机器人 领取接洽码，审核员发送后台认证 ID 完成绑定，
-          表单填写与审核操作仍在网站端完成。
+          表单填写与审核操作仍在网站端完成
         </p>
       </div>
 
@@ -499,7 +499,7 @@ export function RobotPage() {
             showIcon
             style={{ marginBottom: 16 }}
             message="机器人凭据未配置"
-            description="当前不会真正投递消息，仅记录消息日志。请在服务端 .env 配置 QQ_BOT_APPID / QQ_BOT_SECRET 后重启服务。"
+            description="当前不会真正投递消息，仅记录消息日志。请在服务端 .env 配置 QQ_BOT_APPID / QQ_BOT_SECRET 后重启服务"
           />
         )}
         <Descriptions column={4} size="small" className="detail-info">
@@ -605,7 +605,7 @@ export function RobotPage() {
                     ]}
                   />
                   <span className="contact-keys-toolbar__hint">
-                    仅「已绑定 QQ」的接洽码能收到审核结果推送。
+                    仅「已绑定 QQ」的接洽码能收到审核结果推送
                   </span>
                 </div>
                 <Table<ContactKeyDTO>

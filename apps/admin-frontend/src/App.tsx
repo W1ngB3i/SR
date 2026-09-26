@@ -41,7 +41,7 @@ function RequireRole({
     return (
       <div className="page-hero">
         <h1 className="page-hero__title">权限不足</h1>
-        <p className="page-hero__desc">当前角色（{user?.name ?? '未知'}）无权访问该页面。</p>
+        <p className="page-hero__desc">当前角色（{user?.name ?? '未知'}）无权访问该页面</p>
       </div>
     );
   }
@@ -160,7 +160,7 @@ export function App() {
             element={
               <div className="page-hero">
                 <h1 className="page-hero__title">页面不存在</h1>
-                <p className="page-hero__desc">请从左侧导航返回正确的页面。</p>
+                <p className="page-hero__desc">请从左侧导航返回正确的页面</p>
               </div>
             }
           />

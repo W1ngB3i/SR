@@ -81,12 +81,12 @@ export function ConfigPage() {
     <div className="config-page">
       <div className="page-hero">
         <h1 className="page-hero__title">系统配置</h1>
-        <p className="page-hero__desc">平台级参数，修改即时生效并记入审计日志。</p>
+        <p className="page-hero__desc">平台级参数，修改即时生效并记入审计日志</p>
       </div>
 
       <section className="sr-glass detail-card config-card">
         <h2 className="detail-card__title">反馈渠道</h2>
-        <p className="config-card__desc">展示在申请人端「审核规则」页，供申请人在遇到问题时联系。</p>
+        <p className="config-card__desc">展示在申请人端「审核规则」页，供申请人在遇到问题时联系</p>
         <Form form={contactsForm} layout="vertical">
           <div className="config-contacts">
             <Form.Item
@@ -139,7 +139,7 @@ export function ConfigPage() {
       <div className="config-grid">
         <section className="sr-glass detail-card config-card">
           <h2 className="detail-card__title">提交冷却</h2>
-          <p className="config-card__desc">同一申请人两次提交工单的最小间隔（小时）。</p>
+          <p className="config-card__desc">同一申请人两次提交工单的最小间隔（小时）</p>
           <Form form={cooldownForm} layout="vertical">
             <Form.Item
               name="hours"
@@ -164,7 +164,7 @@ export function ConfigPage() {
 
         <section className="sr-glass detail-card config-card">
           <h2 className="detail-card__title">审核员并单上限</h2>
-          <p className="config-card__desc">单个审核员同时在办（审核中 + 补充中）的工单数上限。</p>
+          <p className="config-card__desc">单个审核员同时在办（审核中 + 补充中）的工单数上限</p>
           <Form form={concurrentForm} layout="vertical">
             <Form.Item name="max" rules={[{ required: true, message: '请填写上限' }]}>
               <InputNumber min={1} max={50} style={{ width: '100%' }} addonAfter="条" />
@@ -189,7 +189,7 @@ export function ConfigPage() {
         <h2 className="detail-card__title">接洽码绑定</h2>
         <p className="config-card__desc">
           开启后只有机器人签发、且已绑定 QQ 的接洽码才能提交工单，审核结果会自动 @申请人；
-          关闭时保留审核员在后台手工发码的流程。
+          关闭时保留审核员在后台手工发码的流程
         </p>
         <div className="config-switch">
           <Switch
@@ -218,7 +218,7 @@ export function ConfigPage() {
 
       <section className="sr-glass detail-card config-card">
         <h2 className="detail-card__title">上传限制</h2>
-        <p className="config-card__desc">申请人端证据附件的大小、数量与扩展名白名单。</p>
+        <p className="config-card__desc">申请人端证据附件的大小、数量与扩展名白名单</p>
         <Form form={limitsForm} layout="vertical">
           <div className="config-contacts">
             <Form.Item

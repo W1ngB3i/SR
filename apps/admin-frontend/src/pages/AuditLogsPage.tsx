@@ -119,7 +119,7 @@ export function AuditLogsPage() {
     <div className="audit-page">
       <div className="page-hero">
         <h1 className="page-hero__title">审计日志</h1>
-        <p className="page-hero__desc">只增不删的操作留痕，覆盖工单流转与后台配置的全部变更。</p>
+        <p className="page-hero__desc">只增不删的操作留痕，覆盖工单流转与后台配置的全部变更</p>
       </div>
 
       <div className="sr-glass pool-filter">

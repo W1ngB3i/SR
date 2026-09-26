@@ -191,7 +191,7 @@ export function SubmitPage() {
             type="warning"
             showIcon
             message="请务必记录查询码"
-            description="查询码仅此一次展示，凭「圈名 + 查询码」可在进度查询页随时查看办理进度与补充材料。"
+            description="查询码仅此一次展示，凭「圈名 + 查询码」可在进度查询页随时查看办理进度与补充材料"
           />
           <div className="submit-success__actions">
             <Button type="primary" size="large" onClick={() => navigate('/query')}>
@@ -218,7 +218,7 @@ export function SubmitPage() {
       <div className="page-hero__eyebrow">Submit</div>
       <h1 className="page-hero__title">提交审核申请</h1>
       <p className="page-hero__desc">
-        在 QQ 群内 @审核机器人 发送「拿接洽码」领取一次性接洽码（也可向审核员索取），随后填写圈名、选择目标部门与审核模式并上传证据材料。提交后系统生成唯一查询码，凭「圈名 + 查询码」随时查询进度。
+        在 QQ 群内 @审核机器人 发送「拿接洽码」领取一次性接洽码（也可向审核员索取），随后填写圈名、选择目标部门与审核模式并上传证据材料。提交后系统生成唯一查询码，凭「圈名 + 查询码」随时查询进度
       </p>
 
       <GlassCard tone="strong" className="form-card">
@@ -322,7 +322,7 @@ export function SubmitPage() {
           <Form.Item
             name="self_proof"
             label="自证材料（是否为本人操作）"
-            extra="选填：不选则按非自证（常规录像）处理。"
+            extra="选填：不选则按非自证（常规录像）处理"
           >
             <Radio.Group
               options={[
@@ -335,7 +335,7 @@ export function SubmitPage() {
           <div className="form-card__section-title">证据材料</div>
           <Form.Item
             label={`上传视频 / 截图证据（最多 ${MAX_FILES} 个）`}
-            extra="支持 png / jpg / webp / gif / mp4 / mov / webm / mkv；单文件不超过 200MB。"
+            extra="支持 png / jpg / webp / gif / mp4 / mov / webm / mkv；单文件不超过 200MB"
           >
             <Upload.Dragger
               multiple
