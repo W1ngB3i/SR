@@ -11,6 +11,7 @@ import {
   type UploadFile,
 } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
+import { useSearchParams } from 'react-router-dom';
 import dayjs from 'dayjs';
 import {
   ATTACHMENT_KIND_RULES,
@@ -52,6 +53,7 @@ interface LookupFormValues {
 /** 进度查询页：圈名 + 查询码，展示状态、回执与全量事件时间线 */
 export function QueryPage() {
   const { message } = AntApp.useApp();
+  const [searchParams] = useSearchParams();
   const [form] = Form.useForm<LookupFormValues>();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<LookupResultDTO | null>(null);
@@ -66,6 +68,12 @@ export function QueryPage() {
   const [submittingAppeal, setSubmittingAppeal] = useState(false);
   const [appealDone, setAppealDone] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
+
+  // 机器人消息里的「查看结果」按钮会带上 ?code=，自动预填查询码，省去玩家二次输入
+  useEffect(() => {
+    const code = searchParams.get('code');
+    if (code) form.setFieldValue('query_code', code.trim().toUpperCase());
+  }, [searchParams, form]);
 
   useEffect(() => {
     if (!result || !resultRef.current) return;
@@ -158,7 +166,7 @@ export function QueryPage() {
       <div className="page-hero__eyebrow">Progress</div>
       <h1 className="page-hero__title">进度查询</h1>
       <p className="page-hero__desc">
-        输入提交工单时的圈名与查询码，查看办理进度、审核回执；如被退回补充材料，可在此直接上传。
+        输入提交工单时的圈名与查询码，查看办理进度、审核回执；如被退回补充材料，可在此直接上传
       </p>
 
       <GlassCard tone="strong" className="form-card" style={{ marginBottom: 22 }}>
@@ -316,7 +324,7 @@ export function QueryPage() {
                 <div className="receipt-panel__title">对结果有异议？</div>
                 {appealDone ? (
                   <p style={{ color: 'var(--sr-text-mid)', fontSize: 13.5, lineHeight: 1.9, margin: 0 }}>
-                    申诉已提交，审核总管 / 副总管会尽快处理；处理期间无需重复提交，请留意本页的时间线或反馈渠道通知。
+                    申诉已提交，审核总管 / 副总管会尽快处理；处理期间无需重复提交，请留意本页的时间线或反馈渠道通知
                   </p>
                 ) : appealOpen ? (
                   <>
@@ -346,7 +354,7 @@ export function QueryPage() {
                 ) : (
                   <>
                     <p style={{ color: 'var(--sr-text-mid)', fontSize: 13.5, lineHeight: 1.9 }}>
-                      申诉将由审核总管 / 副总管复核处理，结果记录在工单时间线中，可随时追溯。
+                      申诉将由审核总管 / 副总管复核处理，结果记录在工单时间线中，可随时追溯
                     </p>
                     <Button onClick={() => setAppealOpen(true)}>提交申诉</Button>
                   </>
