@@ -216,6 +216,125 @@
   border-color: #ffd75c;
 }
 
+/* —— ≤1000px 导航入口：汉堡按钮 + 下拉菜单 —— */
+.sv-nav__burger {
+  display: none;
+  flex: none;
+  position: relative;
+  width: 40px;
+  height: 40px;
+  margin-left: 6px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 2px;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    border-color 0.35s var(--sv-ease),
+    background 0.35s var(--sv-ease);
+}
+
+.sv-nav__burger:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.sv-nav__burger span {
+  position: absolute;
+  left: 50%;
+  width: 17px;
+  height: 1.5px;
+  background: var(--sv-white);
+  transform: translateX(-50%);
+  transition:
+    transform 0.42s var(--sv-ease),
+    opacity 0.28s var(--sv-ease);
+}
+
+.sv-nav__burger span:nth-child(1) {
+  top: 14px;
+}
+
+.sv-nav__burger span:nth-child(2) {
+  top: 19px;
+}
+
+.sv-nav__burger span:nth-child(3) {
+  top: 24px;
+}
+
+/* 展开时三条线收成叉号，只做位移与旋转 */
+.sv-nav.is-open .sv-nav__burger span:nth-child(1) {
+  transform: translateX(-50%) translateY(5px) rotate(45deg);
+}
+
+.sv-nav.is-open .sv-nav__burger span:nth-child(2) {
+  opacity: 0;
+}
+
+.sv-nav.is-open .sv-nav__burger span:nth-child(3) {
+  transform: translateX(-50%) translateY(-5px) rotate(-45deg);
+}
+
+/* 移动菜单：贴在固定导航下方；桌面宽度下不参与布局 */
+.sv-menu {
+  display: none;
+  position: fixed;
+  top: 68px;
+  left: 0;
+  right: 0;
+  z-index: 89;
+  flex-direction: column;
+  padding: 6px var(--sv-pad) 26px;
+  /* 矮屏 / 横屏下菜单会高过可用高度，限高并允许滚动，否则末项「申请加入」够不到 */
+  max-height: calc(100vh - 68px);
+  max-height: calc(100dvh - 68px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: rgba(10, 10, 9, 0.97);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+  animation: sv-menu-in 0.36s var(--sv-ease) both;
+}
+
+.sv-menu__item {
+  appearance: none;
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: none;
+  padding: 16px 2px;
+  font-family: inherit;
+  font-size: 15.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-decoration: none;
+  color: var(--sv-white);
+  cursor: pointer;
+  transition: color 0.3s var(--sv-ease);
+}
+
+.sv-menu__item:hover {
+  color: var(--sv-yellow);
+}
+
+.sv-menu__cta {
+  margin-top: 22px;
+  justify-content: center;
+}
+
+@keyframes sv-menu-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -10px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 /* ============================================================
    1 · Hero
    满幅宣传片画面 + 压暗遮罩，底部压一条公告
@@ -235,6 +354,13 @@
   inset: -6% -2% 0;
   z-index: -2;
   will-change: transform;
+}
+
+/* <picture> 只是响应式外壳，撑满容器让内部 img 的既有规则继续生效 */
+.sv-hero__bg picture {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .sv-hero__bg img {
@@ -407,7 +533,7 @@
   padding-top: 34px;
   border-top: 1px solid rgba(20, 19, 17, 0.14);
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: clamp(20px, 3vw, 44px);
 }
 
@@ -653,6 +779,13 @@
   aspect-ratio: 16 / 9;
 }
 
+/* 同上：<picture> 撑满封面框，img 的裁剪规则不受影响 */
+.sv-film__cover picture {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 .sv-film__cover img {
   width: 100%;
   height: 100%;
@@ -820,14 +953,26 @@
 
 /* ============================================================
    响应式
+   统一断点口径（三端一致）：
+     lg ≤1024  多列降级、隐藏桌面导航（换汉堡菜单）
+     md ≤768   单列化、网格降为 2 列
+     sm ≤480   手机紧凑：导航压缩、次要信息收起
    ============================================================ */
-@media (max-width: 1000px) {
+@media (max-width: 1024px) {
   .sv-nav__links {
     display: none;
   }
 
+  .sv-nav__burger {
+    display: block;
+  }
+
+  .sv-menu {
+    display: flex;
+  }
+
   .sv-stats {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     row-gap: 32px;
   }
 
@@ -855,7 +1000,7 @@
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 768px) {
   .sv-hero__veil {
     background:
       linear-gradient(180deg, rgba(4, 4, 4, 0.7) 0%, rgba(4, 4, 4, 0.5) 30%, rgba(4, 4, 4, 0.94) 100%);
@@ -888,6 +1033,28 @@
   }
 }
 
+@media (max-width: 480px) {
+  /* 手机导航压缩：品牌副标与公告条横排都让位给主操作 */
+  .sv-nav {
+    gap: 12px;
+  }
+
+  .sv-nav__word em {
+    display: none;
+  }
+
+  .sv-nav__cta {
+    padding: 8px 14px;
+    font-size: 12.5px;
+  }
+
+  .sv-ticker {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sv-landing [data-reveal] {
     opacity: 1;
@@ -896,6 +1063,10 @@
   }
 
   .sv-hero__bg img {
+    animation: none;
+  }
+
+  .sv-menu {
     animation: none;
   }
 }

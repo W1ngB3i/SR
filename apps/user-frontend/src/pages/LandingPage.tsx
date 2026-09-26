@@ -11,10 +11,37 @@ import '../styles/landing.css';
 /** 逐项延迟，营造错峰入场 */
 const delay = (s: number) => ({ '--d': `${s}s` }) as CSSProperties;
 
+/**
+ * 封面响应式候选：统一两档 WebP（-480 / -960），描述符与
+ * scripts/optimize-media.mjs 产出的阶梯一一对应，浏览器按槽位宽度与 DPR 自选。
+ * JPG 原图仍作为 <img> 兜底，未生成 WebP 时不会取到空路径。
+ */
+const coverSrcSet = (cover: string) => {
+  const base = cover.replace(/\.jpg$/, '');
+  return `${base}-480.webp 480w, ${base}-960.webp 960w`;
+};
+
+/** 封面槽位宽度：首图在 3 栏布局里横跨两列，其余单列；≤768px 全部降为单列 */
+const FILM_SIZES_LEAD = '(max-width: 768px) 92vw, (max-width: 1308px) 66vw, 780px';
+const FILM_SIZES = '(max-width: 768px) 92vw, (max-width: 1308px) 33vw, 380px';
+
 /** HashRouter 下不能用 #anchor，改为直接滚动 */
 function scrollToId(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+
+/** 站内锚点导航 */
+const NAV_ANCHORS: { label: string; id: string }[] = [
+  { label: '分部', id: 'divisions' },
+  { label: '那一战', id: 'battle' },
+  { label: '宣传片', id: 'films' },
+];
+
+/** 站内路由导航（落地页之外的页面） */
+const NAV_ROUTES: { label: string; to: string }[] = [
+  { label: '进度查询', to: '/query' },
+  { label: '结果公示', to: '/published' },
+];
 
 /** 四个分部：图待实景截图补齐，未到位时渲染编号占位 */
 const DIVISIONS: {
@@ -28,7 +55,7 @@ const DIVISIONS: {
     idx: '01',
     name: 'SR_Party',
     role: '起点 · Misaki',
-    text: <>公会最早的班底。2021 年 Misaki 国际服那一战由它主导——下面单独讲。</>,
+    text: <>公会最早的班底。2021 年 Misaki 国际服那一战由它主导——下面单独讲</>,
     img: '/media/div-party.jpg',
   },
   {
@@ -38,7 +65,7 @@ const DIVISIONS: {
     text: (
       <>
         前身是花雨庭部门，聚起花雨庭大量公会，规模堪比后来的 Rose 联会、ES。
-        <em>椿枕、逗号、神迹、PWG、立法人（TDA）</em>都在这里待过。
+        <em>椿枕、逗号、神迹、PWG、立法人（TDA）</em>都在这里待过
       </>
     ),
     img: '/media/div-team.jpg',
@@ -51,7 +78,7 @@ const DIVISIONS: {
       <>
         <em>岚天殿</em>在这里铸下名号，
         <em>川狱、焚天殿、MERC、白川、PAS、YFS、Lgs、茗门</em>
-        相继加入。这批老公会，至今三四年。
+        相继加入。这批老公会，至今三四年
       </>
     ),
     img: '/media/div-group.jpg',
@@ -62,7 +89,7 @@ const DIVISIONS: {
     role: '租赁服',
     text: (
       <>
-        在<em>红铁、Ltier</em>圈子里有一席之地，大规模公会战随时能拉人打。
+        在<em>红铁、Ltier</em>圈子里有一席之地，大规模公会战随时能拉人打
       </>
     ),
     img: '/media/div-arrow.jpg',
@@ -75,7 +102,6 @@ const STATS: { num: React.ReactNode; label: string; key?: boolean }[] = [
   { num: <>6<small>年</small></>, label: '从起家至今' },
   { num: <>4<small>个</small></>, label: '分部' },
   { num: '9:1', label: 'Misaki 之战', key: true },
-  { num: <>5<small>部</small></>, label: '宣传片' },
 ];
 
 const FILMS: { year: string; title: string; cover: string; href: string }[] = [
@@ -115,17 +141,17 @@ const STEPS = [
   {
     idx: '01',
     name: '要一个接洽码',
-    text: '在群里私聊审核员，拿到一个一次性接洽码。码只用一次，用完作废。',
+    text: '在 QQ 群内 @审核机器人 发送「拿接洽码」，或私聊审核员索取。码只用一次，用完作废',
   },
   {
     idx: '02',
     name: '填申请单',
-    text: '填圈名、选部门和模式，附上录像或截图。有自证画面更好，没有也能交。',
+    text: '填圈名、选部门和模式，附上录像或截图。有自证画面更好，没有也能交',
   },
   {
     idx: '03',
     name: '等审核与公示',
-    text: '审核员接单、约战、出回执。结果在公示墙公开，凭圈名和查询码随时回看。',
+    text: '审核员接单、约战、出回执。结果在公示墙公开，凭圈名和查询码随时回看',
   },
 ];
 
@@ -146,6 +172,7 @@ function DivisionMedia({ idx, img }: { idx: string; img?: string }) {
 export function LandingPage() {
   const heroRef = useRef<HTMLElement>(null);
   const [stuck, setStuck] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // 滚动进入视口后上移淡入（逐项延迟由 CSS 变量控制），只触发一次
   useEffect(() => {
@@ -188,9 +215,25 @@ export function LandingPage() {
     };
   }, []);
 
+  // 移动菜单：跨过 lg 断点（1024px，回桌面形态）或按 Esc 时收起，避免残留展开态
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false);
+    };
+    const desktop = window.matchMedia('(min-width: 1025px)');
+    const close = () => setMenuOpen(false);
+    window.addEventListener('keydown', onKey);
+    desktop.addEventListener('change', close);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      desktop.removeEventListener('change', close);
+    };
+  }, [menuOpen]);
+
   return (
     <div className="sv-landing">
-      <nav className={`sv-nav${stuck ? ' is-stuck' : ''}`}>
+      <nav className={`sv-nav${stuck ? ' is-stuck' : ''}${menuOpen ? ' is-open' : ''}`}>
         <Link to="/" className="sv-nav__brand">
           <img src="/logo.png" alt="SR" className="sv-nav__mark" />
           <span className="sv-nav__word">
@@ -198,28 +241,81 @@ export function LandingPage() {
           </span>
         </Link>
         <div className="sv-nav__links">
-          <button type="button" onClick={() => scrollToId('divisions')}>
-            分部
-          </button>
-          <button type="button" onClick={() => scrollToId('battle')}>
-            那一战
-          </button>
-          <button type="button" onClick={() => scrollToId('films')}>
-            宣传片
-          </button>
-          <Link to="/query">进度查询</Link>
-          <Link to="/published">结果公示</Link>
+          {NAV_ANCHORS.map((item) => (
+            <button key={item.id} type="button" onClick={() => scrollToId(item.id)}>
+              {item.label}
+            </button>
+          ))}
+          {NAV_ROUTES.map((item) => (
+            <Link key={item.to} to={item.to}>
+              {item.label}
+            </Link>
+          ))}
         </div>
         <Link to="/apply" className="sv-btn sv-btn--sm sv-nav__cta">
           申请加入
         </Link>
+        <button
+          type="button"
+          className="sv-nav__burger"
+          aria-label={menuOpen ? '关闭导航菜单' : '打开导航菜单'}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((v) => !v)}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
       </nav>
+
+      {/* ≤1024px 的导航入口：桌面链接被隐藏后，靠汉堡菜单补齐 */}
+      {menuOpen && (
+        <div className="sv-menu">
+          {NAV_ANCHORS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className="sv-menu__item"
+              onClick={() => {
+                setMenuOpen(false);
+                scrollToId(item.id);
+              }}
+            >
+              {item.label}
+            </button>
+          ))}
+          {NAV_ROUTES.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className="sv-menu__item"
+              onClick={() => setMenuOpen(false)}
+            >
+              {item.label}
+            </Link>
+          ))}
+          <Link
+            to="/apply"
+            className="sv-btn sv-btn--solid sv-menu__cta"
+            onClick={() => setMenuOpen(false)}
+          >
+            申请加入
+          </Link>
+        </div>
+      )}
 
       {/* 1 · Hero：满幅画面 + 底部公告条 */}
       <section className="sv-hero" ref={heroRef}>
         <div className="sv-hero__bg">
-          {/* 主视觉用 2K26 宣传片封面（1920×1080）；以后有更好的实景截图直接换此处 */}
-          <img src="/media/cover-2k26.jpg" alt="" />
+          {/* 主视觉用 2K26 宣传片封面（1920×1080）；按断点出 WebP，手机端不必下全尺寸大图 */}
+          <picture>
+            <source
+              type="image/webp"
+              sizes="100vw"
+              srcSet="/media/cover-2k26-960.webp 960w, /media/cover-2k26-1440.webp 1440w, /media/cover-2k26.webp 1920w"
+            />
+            <img src="/media/cover-2k26.jpg" alt="" fetchPriority="high" decoding="async" />
+          </picture>
         </div>
         <div className="sv-hero__veil" />
         <div className="sv-hero__inner">
@@ -227,12 +323,12 @@ export function LandingPage() {
             SR · MC PVP 公会
           </p>
           <h1 className="sv-hero__title" data-reveal style={delay(0.28)}>
-            <span>在方块间打了六年。</span>
-            <span>还没打完。</span>
+            <span>在方块间打了六年</span>
+            <span>还没打完</span>
           </h1>
           <p className="sv-hero__sub" data-reveal style={delay(0.42)}>
             <b>SR_Party、SR_Team、SR_Group、SR_Arrow</b>
-            ——四个分部，从 Misaki 国际服一路打到今天。
+            ——四个分部，从 Misaki 国际服一路打到今天
           </p>
           <div className="sv-hero__cta" data-reveal style={delay(0.56)}>
             <Link to="/apply" className="sv-btn sv-btn--solid">
@@ -261,11 +357,11 @@ export function LandingPage() {
       <section className="sv-manifesto">
         <div className="sv-wrap">
           <h2 className="sv-manifesto__lines" data-reveal>
-            <span>不只是一个公会。</span>
-            <span>是 MC PvP 的一段路。</span>
+            <span>不只是一个公会</span>
+            <span>是 MC PvP 的一段路</span>
           </h2>
           <p className="sv-manifesto__lede" data-reveal style={delay(0.12)}>
-            2020 年，几个人在方块间约了一场架。后来人越来越多——有人留下名字，有人立下规矩，也有人把最好的几年放在了这里。圈子换了几轮，服务器开了又关，我们还在打。
+            2020 年，几个人在方块间约了一场架。后来人越来越多——有人留下名字，有人立下规矩，也有人把最好的几年放在了这里。圈子换了几轮，服务器开了又关，我们还在打
           </p>
           <div className="sv-stats">
             {STATS.map((s, i) => (
@@ -321,7 +417,7 @@ export function LandingPage() {
         </div>
         <p className="sv-battle__text" data-reveal style={delay(0.26)}>
           2021 年中，Misaki 国际服触屏公会战。SR 面对天选、冥界两军联军，最终以 9 比 1
-          收场。这一战由 SR_Party 主导，也是后面所有故事的起点。
+          收场。这一战由 SR_Party 主导，也是后面所有故事的起点
         </p>
       </section>
 
@@ -330,7 +426,7 @@ export function LandingPage() {
         <div className="sv-wrap">
           <div className="sv-sec-head sv-sec-head--ink" data-reveal>
             <div className="sv-sec-head__eyebrow">2023 — 2026</div>
-            <h2 className="sv-sec-head__title">五部宣传片</h2>
+            <h2 className="sv-sec-head__title">历年宣传片</h2>
           </div>
           <div className="sv-films__grid">
             {FILMS.map((f, i) => (
@@ -344,7 +440,14 @@ export function LandingPage() {
                 style={delay(0.06 * i)}
               >
                 <div className="sv-film__cover">
-                  <img src={f.cover} alt={`《${f.title}》封面`} loading="lazy" />
+                  <picture>
+                    <source
+                      type="image/webp"
+                      sizes={i === 0 ? FILM_SIZES_LEAD : FILM_SIZES}
+                      srcSet={coverSrcSet(f.cover)}
+                    />
+                    <img src={f.cover} alt={`《${f.title}》封面`} loading="lazy" />
+                  </picture>
                   <span className="sv-film__play" aria-hidden="true">
                     <svg viewBox="0 0 12 14" fill="currentColor">
                       <path d="M0 0l12 7-12 7z" />
@@ -383,7 +486,7 @@ export function LandingPage() {
             </Link>
             <p className="sv-join__note">
               找不到接洽码？联系审核总管<b>望北</b>（QQ 2774265885）或副总管<b>雨夜</b>
-              （QQ 477109615）。
+              （QQ 477109615）
             </p>
           </div>
         </div>
