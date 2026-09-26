@@ -617,14 +617,27 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* —— 响应式 —— */
-@media (max-width: 960px) {
+/* —— 响应式 ——
+   统一断点口径（三端一致）：
+     lg ≤1024  多列降级
+     md ≤768   单列化、导航压缩、触控目标 ≥44px
+     sm ≤480   手机紧凑 */
+@media (max-width: 1024px) {
   .pub-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-@media (max-width: 700px) {
+@media (max-width: 768px) {
+  /* 机器人「去申请 / 查看结果」按钮落到本端页面，手机与平板都是触控输入，控件给足 44px */
+  .form-card .ant-form-item-control-input-content > .ant-input,
+  .form-card .ant-form-item-control-input-content > .ant-input-affix-wrapper,
+  .form-card .ant-form-item-control-input-content > .ant-select .ant-select-selector,
+  .receipt-panel .ant-input,
+  .receipt-panel .ant-input-affix-wrapper {
+    min-height: 44px;
+  }
+
   .app-header__inner {
     padding: 0 16px;
   }
@@ -665,5 +678,50 @@
 
   .query-code {
     font-size: 34px;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-header__inner {
+    padding: 0 12px;
+    height: 56px;
+  }
+
+  .app-nav {
+    gap: 0;
+  }
+
+  .app-nav a {
+    padding: 8px 6px;
+    font-size: 12.5px;
+  }
+
+  .app-nav a::after {
+    left: 6px;
+    right: 6px;
+  }
+
+  .app-main {
+    padding: 22px 12px 56px;
+  }
+
+  .form-card {
+    padding: 20px 14px;
+  }
+
+  .receipt-panel {
+    padding: 18px 16px;
+  }
+
+  .query-code {
+    font-size: 30px;
+  }
+
+  .submit-success__actions {
+    flex-direction: column;
+  }
+
+  .submit-success__actions .ant-btn {
+    width: 100%;
   }
 }

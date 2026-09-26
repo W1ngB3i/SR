@@ -1085,8 +1085,12 @@
   font-size: 12px;
 }
 
-/* —— 响应式 —— */
-@media (max-width: 1080px) {
+/* —— 响应式 ——
+   统一断点口径（三端一致）：
+     lg ≤1024  详情双栏降单栏、统计卡降列
+     md ≤768   侧栏转图标栏、窄屏表格横向滚动（Table scroll.x）、触控目标 ≥44px
+     sm ≤480   手机紧凑 */
+@media (max-width: 1024px) {
   .detail-grid {
     grid-template-columns: 1fr;
   }
@@ -1104,7 +1108,19 @@
   }
 }
 
-@media (max-width: 780px) {
+@media (max-width: 768px) {
+  /* 机器人「去接单」按钮直接落到 /tickets/:id，手机与平板都是触控输入，控件给足 44px */
+  .admin-main .ant-input,
+  .admin-main .ant-input-affix-wrapper,
+  .admin-main .ant-select-selector {
+    min-height: 44px;
+  }
+
+  /* affix 外壳已给到 44px，内层 input 不再叠加，避免被撑到 52px */
+  .admin-main .ant-input-affix-wrapper > .ant-input {
+    min-height: 0;
+  }
+
   /* 小屏固定为图标栏形态，避免挤压内容区 */
   .admin-sider,
   .admin-shell .admin-sider {
@@ -1159,6 +1175,25 @@
   .admin-header__name,
   .admin-role {
     display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  /* 手机应急查看：进一步收紧留白，把宽度让给表格与详情 */
+  .admin-header {
+    padding: 0 12px;
+  }
+
+  .admin-main {
+    padding: 18px 12px 56px;
+  }
+
+  .pool-filter {
+    padding: 12px;
+  }
+
+  .detail-card {
+    padding: 18px 16px;
   }
 }
 
