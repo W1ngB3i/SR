@@ -177,18 +177,22 @@ export async function sendRobotMessage(body: RobotMessageBody): Promise<void> {
 
 // ---------------------------------------------------------------------------
 // 按钮链接（与用户端 / 管理端路由一一对应）
+//
+// 两端均为 HashRouter（路由在 # 之后），且主要使用路径是手机 QQ 内嵌浏览器点击按钮。
+// 若输出裸路径（如 /apply），内嵌浏览器会请求服务端真实路径而掉回首页/落地页，
+// 因此必须带 `/#/` 前缀，由前端路由接管。
 // ---------------------------------------------------------------------------
 
 export function applyLink(code: string): string {
-  return `${PUBLIC_SITE_URL}/apply?code=${encodeURIComponent(code)}`;
+  return `${PUBLIC_SITE_URL}/#/apply?code=${encodeURIComponent(code)}`;
 }
 
 export function resultLink(code: string): string {
-  return `${PUBLIC_SITE_URL}/query?code=${encodeURIComponent(code)}`;
+  return `${PUBLIC_SITE_URL}/#/query?code=${encodeURIComponent(code)}`;
 }
 
 export function ticketLink(ticketId: string): string {
-  return `${ADMIN_SITE_URL}/tickets/${encodeURIComponent(ticketId)}`;
+  return `${ADMIN_SITE_URL}/#/tickets/${encodeURIComponent(ticketId)}`;
 }
 
 /** 供管理后台展示机器人接入状态 */
