@@ -69,7 +69,7 @@ test('主链路：生成接洽码 → 提交 → 接单 → 回执 → 公示 �
   await expect(page.getByPlaceholder('游戏内使用的圈名')).toBeVisible();
 
   await page.getByPlaceholder('游戏内使用的圈名').fill(CIRCLE);
-  await page.getByPlaceholder('向审核员索取，如 AB2CDE').fill(contactKey);
+  await page.getByPlaceholder('如 AB2CDE').fill(contactKey);
   await pickOption(page, '审核部门', '其他模块');
   await pickOption(page, '审核模式', '建筑');
   await page.getByText('PC PVP（键鼠）', { exact: true }).click();
