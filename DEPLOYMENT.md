@@ -33,7 +33,7 @@ cp .env.example .env
 # 编辑 .env：
 #   JWT_SECRET 必填，生成方式：openssl rand -base64 48
 #   可选调整对外端口：USER_FRONTEND_PORT / ADMIN_FRONTEND_PORT
-#   可选接入 QQ 机器人：QQ_BOT_APPID / QQ_BOT_SECRET / QQ_BOT_TOKEN
+#   可选接入 QQ 机器人：QQ_BOT_APPID / QQ_BOT_SECRET
 #                        PUBLIC_SITE_URL / ADMIN_SITE_URL（见第 9 节）
 
 # 3) 构建并启动（4 个容器：api / user-frontend / admin-frontend / backup）
@@ -88,10 +88,9 @@ Environment=NODE_ENV=production
 Environment=JWT_SECRET=<openssl rand -base64 48 的结果>
 Environment=SR_DATA_DIR=/opt/sr-review/apps/api/data
 Environment=SR_STORAGE_DIR=/opt/sr-review/apps/api/storage
-# 可选：QQ 机器人（三项齐备才投递消息，不需要机器人时整段删除）
+# 可选：QQ 机器人（AppID 与 Secret 齐备才投递消息，不需要机器人时整段删除）
 Environment=QQ_BOT_APPID=
 Environment=QQ_BOT_SECRET=
-Environment=QQ_BOT_TOKEN=
 Environment=PUBLIC_SITE_URL=http://<服务器公网IP>:5173
 Environment=ADMIN_SITE_URL=http://<服务器公网IP>:5174
 ExecStart=/usr/bin/node apps/api/dist/server.js
@@ -202,12 +201,13 @@ docker compose start api
 
 ### 9.1 准备凭据
 
-在 QQ 开放平台（`q.qq.com`）创建机器人应用，取得 **AppID / Secret / Token**，填入 `.env`：
+在 QQ 开放平台（`q.qq.com`）创建机器人应用，在「开发设置」页取得 **AppID** 与 **AppSecret**，填入 `.env`：
+
+> 旧版的 **Token** 鉴权平台已弃用：v2 开放接口用 AppID + Secret 换取 AccessToken（应用会自动换并缓存），回调验签也用同一个 Secret，因此**无需 Token**。
 
 ```ini
 QQ_BOT_APPID=<AppID>
-QQ_BOT_SECRET=<Secret>
-QQ_BOT_TOKEN=<Token>
+QQ_BOT_SECRET=<AppSecret>
 QQ_BOT_SANDBOX=false            # 联调阶段可先设 true
 PUBLIC_SITE_URL=http://<对外地址>:5173     # 申请人侧入口
 ADMIN_SITE_URL=http://<对外地址>:5174      # 审核工作台
@@ -234,7 +234,7 @@ http://<对外地址>:5173/api/robot/webhook
 
 ### 9.3 启用并验证
 
-1. 管理后台（5174）→「机器人管理」页，顶部「接入状态」应显示**已接通**。若显示未配置，说明 `.env` 三项凭据没生效，检查容器环境变量后重建。
+1. 管理后台（5174）→「机器人管理」页，顶部「接入状态」应显示**已接通**。若显示未配置，说明 `.env` 里 AppID / Secret 没生效，检查容器环境变量后重建。
 2. 审核员：在管理后台右上角点击自己的**认证 ID** 复制，在 QQ 群里 @机器人 并发送该 ID。机器人回复「已绑定为…」即成功；页面「身份绑定」列表会出现该条记录，请补上部门与 QQ 号（**部门决定新工单 @谁**）。
 3. 申请人：在群里 @机器人 发送「拿接洽码」，机器人回复接洽码与「去申请」按钮；点击后用户端会自动预填接洽码。
 4. 提交一条测试工单，观察该部门审核员是否被 @；走完复核公示后，申请人是否收到结果通知。
@@ -251,10 +251,10 @@ http://<对外地址>:5173/api/robot/webhook
 
 | 现象 | 处理 |
 | --- | --- |
-| 「机器人管理」显示未配置 | `.env` 三项凭据未生效：`docker compose exec api printenv` 核对 QQ_BOT_*，改完需重建容器 |
+| 「机器人管理」显示未配置 | `.env` 里 AppID / Secret 未生效：`docker compose exec api printenv \| grep QQ_BOT` 核对，改完需重建容器 |
 | 回调地址校验失败 | 确认公网可达且路径为 `/api/robot/webhook`；确认 Secret 填对；接口返回 503 表示 `.env` 里 `QQ_BOT_SECRET` 为空 |
 | 群内 @机器人 无任何反应 | 开放平台事件订阅是否包含群 @消息；查看「消息日志」是否有 `收到` 记录 |
-| 日志有 `failed` 且提示 401 / 403 | Token 或 AppID 不匹配，重新从开放平台复制 |
+| 日志有 `failed` 且提示 401 / 403 | AppID 或 AppSecret 不匹配，重新从开放平台「开发设置」复制 |
 | 群内拿码正常，但工单通知发不出 | 通知属主动消息：确认群主已开启「机器人主动在群聊内发言」，并留意每月 4 条的配额（失败原因见「消息日志」） |
 | 审核员收不到新工单 @ | 该审核员身份绑定缺「部门」，或部门与工单不匹配；群里 @机器人 重发认证 ID 可重绑 |
 | 申请人收不到结果 | 其接洽码未绑定 QQ（后台「接洽码」页筛选「未绑定 QQ」可核对），需走机器人重新取码 |

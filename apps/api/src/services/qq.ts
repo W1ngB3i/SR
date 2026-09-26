@@ -143,7 +143,7 @@ function buildKeyboard(button: { label: string; url: string }) {
  */
 export async function sendRobotMessage(body: RobotMessageBody): Promise<void> {
   if (!isRobotConfigured()) {
-    throw new Error('机器人凭据未配置（QQ_BOT_APPID / QQ_BOT_SECRET / QQ_BOT_TOKEN）');
+    throw new Error('机器人凭据未配置（QQ_BOT_APPID / QQ_BOT_SECRET）');
   }
   const token = await getAccessToken();
   const path =

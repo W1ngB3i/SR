@@ -361,7 +361,7 @@ async function deliver(
       content,
       ticketId: message.ticketId,
       contactKeyId: message.contactKeyId,
-      error: '机器人凭据未配置（QQ_BOT_APPID / QQ_BOT_SECRET / QQ_BOT_TOKEN）',
+      error: '机器人凭据未配置（QQ_BOT_APPID / QQ_BOT_SECRET）',
     });
   }
   try {

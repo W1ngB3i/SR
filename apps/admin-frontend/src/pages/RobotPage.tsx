@@ -499,7 +499,7 @@ export function RobotPage() {
             showIcon
             style={{ marginBottom: 16 }}
             message="机器人凭据未配置"
-            description="当前不会真正投递消息，仅记录消息日志。请在服务端 .env 配置 QQ_BOT_APPID / QQ_BOT_SECRET / QQ_BOT_TOKEN 后重启服务。"
+            description="当前不会真正投递消息，仅记录消息日志。请在服务端 .env 配置 QQ_BOT_APPID / QQ_BOT_SECRET 后重启服务。"
           />
         )}
         <Descriptions column={4} size="small" className="detail-info">

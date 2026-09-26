@@ -66,7 +66,7 @@ docker compose up -d --build
 | `SR_DATA_DIR` | `apps/api/data` | 数据库与 JWT 密钥目录 |
 | `SR_STORAGE_DIR` | `apps/api/storage` | 证据文件落盘目录 |
 | `JWT_SECRET` | 自动生成并持久化 | **生产必须显式指定**（`NODE_ENV=production` 时未注入会拒绝启动） |
-| `QQ_BOT_APPID` / `QQ_BOT_SECRET` / `QQ_BOT_TOKEN` | 空 | QQ 机器人凭据；三项齐备才真正投递消息，任一缺失时只记消息日志 |
+| `QQ_BOT_APPID` / `QQ_BOT_SECRET` | 空 | QQ 机器人凭据（开放平台「开发设置」的 AppID / AppSecret）；二者齐备才真正投递消息，任一缺失时只记消息日志 |
 | `QQ_BOT_SANDBOX` | `false` | 机器人开放接口是否走沙箱域名 |
 | `PUBLIC_SITE_URL` | `http://localhost:5173` | 机器人按钮「去申请 / 查看结果」指向的外部地址 |
 | `ADMIN_SITE_URL` | `http://localhost:5174` | 机器人按钮「去接单」指向的外部地址 |
