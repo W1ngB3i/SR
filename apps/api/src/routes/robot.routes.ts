@@ -62,23 +62,24 @@ robotRouter.post('/webhook', (req, res) => {
   }
 
   const request = req as Request & { rawBody?: Buffer };
-  const signature = req.header('X-Signature-Ed25519');
-  const timestamp = req.header('X-Signature-Timestamp');
-
-  if (!verifyWebhookSignature(signature, timestamp, request.rawBody)) {
-    res.status(401).json({ message: '签名校验失败' });
-    return;
-  }
-
   const payload = (req.body ?? {}) as WebhookPayload;
 
-  // 回调地址验证：用 Secret 派生的 Ed25519 密钥签名 plain_token
+  // 回调地址验证（op:13）：用 Secret 派生的 Ed25519 密钥签名 plain_token。
+  // 平台首次验证地址时不带签名头，只有 plain_token，因此必须放在验签之前处理。
   if (payload.op === 13) {
     const d = asRecord(payload.d);
     res.json({
       plain_token: asString(d['plain_token']),
       signature: signPlainToken(asString(d['plain_token']), asString(d['event_ts'])),
     });
+    return;
+  }
+
+  const signature = req.header('X-Signature-Ed25519');
+  const timestamp = req.header('X-Signature-Timestamp');
+
+  if (!verifyWebhookSignature(signature, timestamp, request.rawBody)) {
+    res.status(401).json({ message: '签名校验失败' });
     return;
   }
 
