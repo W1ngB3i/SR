@@ -42,6 +42,8 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/packages/shared ./packages/shared
 COPY --from=build /app/apps/api/package.json ./apps/api/package.json
 COPY --from=build /app/apps/api/dist ./apps/api/dist
+# pnpm prune --prod 会移除 workspace 链接，运行时需手动补回 @sr/shared
+RUN mkdir -p node_modules/@sr && ln -sfn /app/packages/shared node_modules/@sr/shared
 EXPOSE 8787
 CMD ["node", "apps/api/dist/server.js"]
 
