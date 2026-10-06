@@ -8,6 +8,7 @@ let ticket: typeof import('../src/services/ticket.js');
 let config: typeof import('../src/services/config.js');
 let key: typeof import('../src/services/key.js');
 let robot: typeof import('../src/services/robot.js');
+let robotPanel: typeof import('../src/services/robotPanel.js');
 let userSvc: typeof import('../src/services/user.js');
 let qq: typeof import('../src/services/qq.js');
 let dbMod: typeof import('../src/db/index.js');
@@ -18,6 +19,7 @@ beforeAll(async () => {
   config = await import('../src/services/config.js');
   key = await import('../src/services/key.js');
   robot = await import('../src/services/robot.js');
+  robotPanel = await import('../src/services/robotPanel.js');
   userSvc = await import('../src/services/user.js');
   qq = await import('../src/services/qq.js');
   dbMod = await import('../src/db/index.js');
@@ -81,6 +83,13 @@ describe('QQ 机器人：身份绑定', () => {
     const identity = withPage().find((i) => i.openid === 'openid-reviewer-1');
     expect(identity?.qq_number).toBe('123456789');
     expect(identity?.dept_id).toBe('dept-ec-intl');
+  });
+
+  it('发送「绑定」只提示认证 ID，不建立绑定', async () => {
+    const reply = await robot.handleInboundMessage(groupCtx('openid-bind-prompt', '绑定', 'msg-bind'));
+    expect(reply.kind).toBe('reviewer_bind');
+    expect(reply.content).toContain('认证 ID');
+    expect(withPage().some((i) => i.openid === 'openid-bind-prompt')).toBe(false);
   });
 
   it('未配置凭据时出站消息记为失败并保留错误原因', async () => {
@@ -224,6 +233,54 @@ describe('QQ 机器人：后台管理', () => {
     expect(status.bound_key_count).toBeGreaterThan(0);
     expect(status.failed_message_count).toBeGreaterThan(0);
     expect(status.issuer_name).toBe(key.ROBOT_ISSUER_NAME);
+  });
+});
+
+describe('QQ 机器人：指令面板', () => {
+  it('面板的每个 command 元素都能被指令分发器识别（点了不会没反应）', async () => {
+    expect(robot.PANEL_COMMANDS.length).toBeGreaterThan(0);
+    for (const item of robot.PANEL_COMMANDS) {
+      const reply = await robot.handleInboundMessage(
+        groupCtx(`openid-panel-${item.name}`, item.name, `panel-${item.name}`),
+      );
+      expect(reply.kind, `面板元素「${item.name}」落到了兜底分支`).not.toBe('unhandled');
+    }
+  });
+
+  it('面板元素满足平台长度与数量限制', () => {
+    // 平台限制：元素名 ≤14 字符、描述 ≤30 字符、单面板 ≤20 个元素
+    for (const item of robot.PANEL_COMMANDS) {
+      expect([...item.name].length, `元素名过长：${item.name}`).toBeLessThanOrEqual(14);
+      expect([...item.desc].length, `描述过长：${item.desc}`).toBeLessThanOrEqual(30);
+    }
+    expect(robot.PANEL_COMMANDS.length).toBeLessThanOrEqual(19); // 另加 1 个跳网站链接
+  });
+
+  it('待下发的面板包含 8 个指令与 1 个跳网站兜底链接', () => {
+    const items = robotPanel.panelItems();
+    expect(items.filter((item) => item.type === 'command')).toHaveLength(robot.PANEL_COMMANDS.length);
+    const link = items.find((item) => item.type === 'link');
+    expect(link?.name).toBe(robot.PANEL_LINK_ITEM.name);
+    // HashRouter 必须带 /#/，否则手机 QQ 内嵌浏览器会掉回首页
+    expect(link?.link).toContain('/#/apply');
+  });
+
+  it('凭据未配置时概览不请求平台，直接返回本地定义', async () => {
+    const overview = await robotPanel.robotPanelOverview();
+    expect(overview.configured).toBe(false);
+    expect(overview.panels).toHaveLength(0);
+    expect(overview.items.length).toBeGreaterThan(0);
+  });
+
+  it('凭据未配置时下发与删除都被拒绝', async () => {
+    await expect(robotPanel.syncRobotPanels(wangbei)).rejects.toThrowError(/凭据未配置/);
+    await expect(robotPanel.removeRobotPanels('c2c', wangbei)).rejects.toThrowError(/凭据未配置/);
+  });
+
+  it('群聊面板以「已绑定审核员所在的群」为投放范围', async () => {
+    // 前文已让 openid-reviewer-1 在 guild-1 完成绑定
+    const overview = await robotPanel.robotPanelOverview();
+    expect(overview.group_openids).toContain('guild-1');
   });
 });
 

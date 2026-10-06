@@ -266,6 +266,50 @@ export interface RobotStatusDTO {
   issuer_name: string;
 }
 
+/** 指令面板生效场景：单聊 / 群聊 */
+export type RobotPanelScope = 'c2c' | 'group';
+
+/**
+ * 指令面板元素（QQ 开放平台 /v2/panels）。
+ * type=command 时点击会把 name 填入聊天输入框（等同于用户直接发送该指令文本），
+ * type=link 时点击在浏览器打开 link。
+ */
+export interface RobotPanelItemDTO {
+  type: 'command' | 'link';
+  /** 平台限制：最多 14 个字符（约 7 个汉字） */
+  name: string;
+  /** 平台限制：最多 30 个字符（约 15 个汉字） */
+  desc?: string;
+  only_admin?: boolean;
+  link?: string;
+}
+
+/** 已下发到 QQ 的指令面板 */
+export interface RobotPanelDTO {
+  scope: RobotPanelScope;
+  panel_id: string;
+  /** 平台侧当前元素个数 */
+  item_count: number;
+  /** 平台侧最后修改时间；平台未返回时为空串 */
+  updated_at: string;
+}
+
+/** 指令面板概览：待下发的元素定义 + 已下发的面板 + 群聊覆盖范围 */
+export interface RobotPanelOverviewDTO {
+  /** 机器人凭据是否已配置；未配置时不会请求平台 */
+  configured: boolean;
+  /** 代码中定义的、与指令分发器一一对应的元素 */
+  items: RobotPanelItemDTO[];
+  panels: RobotPanelDTO[];
+  /** 群聊面板会覆盖的群 openid（取自已绑定审核员所在的群） */
+  group_openids: string[];
+}
+
+/** 下发结果：概览 + 本次同步的说明（如群聊面板被跳过） */
+export interface RobotPanelSyncResultDTO extends RobotPanelOverviewDTO {
+  notes: string[];
+}
+
 export interface LookupResultDTO {
   ticket: TicketSummaryDTO;
   receipt: ReceiptDTO | null;

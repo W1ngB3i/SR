@@ -489,6 +489,8 @@ const CODE_INTENT_RE = /(接洽码|拿码|要码|申请码|来个码)/;
 const APPLY_RE = /^(申请工单|我要申请|申请|\/apply)$/;
 /** 作废当前申请草稿 */
 const CANCEL_RE = /^(取消|作废|退出|\/cancel)$/i;
+/** 请求绑定审核员身份（指令面板「绑定」元素与文字指令共用） */
+const BIND_INTENT_RE = /^(绑定|绑定身份|审核员绑定|认证|认证\s*id)$/i;
 /** 帮助 / 指令清单 */
 const HELP_RE = /^(帮助|菜单|指令|help|\/help|\?|？)$/i;
 /** 部门介绍 */
@@ -510,6 +512,26 @@ const HELP_TEXT = [
   '· 拿接洽码 —— 领取一次性接洽码',
   '· 绑定 <后台认证 ID> —— 审核员完成身份绑定',
 ].join('\n');
+
+/**
+ * 指令面板（QQ 开放平台 /v2/panels）里的 command 元素。
+ * command 元素被点击后会把 name 填进聊天输入框，等同于用户直接发送该文本，
+ * 因此 name 必须能被上面的分发器正则识别（tests/robot.test.ts 有断言守护），
+ * desc 只在面板内展示说明，不参与分发。
+ */
+export const PANEL_COMMANDS: { name: string; desc: string }[] = [
+  { name: '申请工单', desc: '聊天式填单，QQ 内完成申请' },
+  { name: '查询', desc: '查看工单进度与结果' },
+  { name: '公示', desc: '查看最近结果公示' },
+  { name: '规则', desc: '查看部门难度与审核标准' },
+  { name: '拿接洽码', desc: '领取一次性接洽码' },
+  { name: '绑定', desc: '审核员绑定后台认证 ID' },
+  { name: '部门介绍', desc: '五大部门历史与现状' },
+  { name: '帮助', desc: '查看全部指令与用法' },
+];
+
+/** 指令面板的 link 元素：去网站申请页（HashRouter 必须带 /#/，否则内嵌浏览器掉回首页） */
+export const PANEL_LINK_ITEM = { name: '去网站申请', desc: '在网页端填写并上传证据' };
 
 /** 五个部门历史与现状：口径摘自落地页设计文案 */
 const DEPARTMENT_INTRO_TEXT = [
@@ -579,6 +601,10 @@ export async function handleInboundMessage(ctx: InboundContext): Promise<RobotMe
   if (CODE_INTENT_RE.test(content)) {
     clearSession(ctx.openid, ctx.target);
     return handleIssueCode(ctx, content);
+  }
+  if (BIND_INTENT_RE.test(content)) {
+    clearSession(ctx.openid, ctx.target);
+    return handleBindPrompt(ctx, content);
   }
 
   // 2. 显式申请入口：重置并从头开始
@@ -977,6 +1003,16 @@ async function submitApply(ctx: InboundContext, draft: ApplyDraft): Promise<Robo
     const message = err instanceof Error ? err.message : '提交失败，请稍后重试。';
     return deliver(ctx, { kind: RobotMessageKind.ApplyTicket, content: `提交未成功：${message}` });
   }
+}
+
+/** 「绑定」只作提示：真正的绑定动作在收到后台认证 ID（usr-xxxx）时执行 */
+async function handleBindPrompt(ctx: InboundContext, content: string): Promise<RobotMessageDTO> {
+  logInbound(ctx, RobotMessageKind.ReviewerBind, content);
+  return deliver(ctx, {
+    kind: RobotMessageKind.ReviewerBind,
+    content:
+      '请发送你的后台认证 ID（形如 usr_xxxxxxxx，可在管理后台右上角点击自己的名字复制），我来完成审核员绑定。',
+  });
 }
 
 async function handleReviewerBind(ctx: InboundContext, content: string): Promise<RobotMessageDTO> {

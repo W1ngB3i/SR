@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import type { RobotPanelItemDTO, RobotPanelScope } from '@sr/shared';
 import {
   ADMIN_SITE_URL,
   PUBLIC_SITE_URL,
@@ -197,6 +198,127 @@ export async function ackInteraction(interactionId: string): Promise<void> {
   }
 }
 
+/**
+ * 调用开放接口的通用封装：统一鉴权头，并把平台的 err_code 带进错误信息。
+ * 平台约定 HTTP 200 也可能是业务失败（响应体里有 err_code），因此两层都要判。
+ * 失败信息保留 err_code，便于上层按码识别（例如 40030006 指令面板不存在）。
+ */
+async function openApiRequest<T>(method: string, path: string, body?: unknown): Promise<T> {
+  if (!isRobotConfigured()) {
+    throw new Error('机器人凭据未配置（QQ_BOT_APPID / QQ_BOT_SECRET）');
+  }
+  const token = await getAccessToken();
+  const res = await fetch(`${OPEN_API_BASE}${path}`, {
+    method,
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      Authorization: `QQBot ${token}`,
+      'X-Union-Appid': QQ_BOT_APPID,
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const text = await res.text().catch(() => '');
+  let payload: Record<string, unknown> | null = null;
+  if (text) {
+    try {
+      payload = JSON.parse(text) as Record<string, unknown>;
+    } catch {
+      payload = null;
+    }
+  }
+  const errCode = typeof payload?.['err_code'] === 'number' ? payload['err_code'] : 0;
+  if (!res.ok || errCode !== 0) {
+    const message = typeof payload?.['message'] === 'string' ? payload['message'] : '';
+    const detail = message || (text ? text.slice(0, 200) : '');
+    throw new Error(
+      `开放接口调用失败：HTTP ${res.status}${errCode ? ` err_code ${errCode}` : ''}${detail ? ` ${detail}` : ''}`,
+    );
+  }
+  return (payload ?? {}) as T;
+}
+
+// ---------------------------------------------------------------------------
+// 指令面板（/v2/panels）：管理端快捷菜单只覆盖单聊，群聊面板只能走 API 创建
+// ---------------------------------------------------------------------------
+
+/** 平台返回的面板记录 */
+export interface QQPanelRecord {
+  panel_id: string;
+  scope: string;
+  target_type: string;
+  panel?: { items?: RobotPanelItemDTO[]; remark?: string; version?: number };
+  created_at?: string;
+  updated_at?: string;
+  version?: number;
+}
+
+/** 创建 / 更新面板时提交的内容 */
+export interface QQPanelInput {
+  items: RobotPanelItemDTO[];
+  remark?: string;
+}
+
+/** 分页拉取某场景下的面板（最多 5 页，足够覆盖 20 个面板上限） */
+export async function listRobotPanels(scope: RobotPanelScope): Promise<QQPanelRecord[]> {
+  const out: QQPanelRecord[] = [];
+  let cursor = '';
+  for (let page = 0; page < 5; page += 1) {
+    const query = `?scope=${scope}&limit=50${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`;
+    const data = await openApiRequest<{
+      records?: QQPanelRecord[];
+      next_cursor?: string;
+      is_end?: boolean;
+    }>('GET', `/v2/panels${query}`);
+    out.push(...(data.records ?? []));
+    cursor = data.next_cursor ?? '';
+    if (data.is_end || !cursor) break;
+  }
+  return out;
+}
+
+/** 创建面板，返回平台侧 panel_id。群聊面板单次最多关联 20 个群，超出部分需再调 target 接口 */
+export async function createRobotPanel(input: {
+  scope: RobotPanelScope;
+  targetType: 'all' | 'specific';
+  groupOpenids?: string[];
+  panel: QQPanelInput;
+}): Promise<string> {
+  const body: Record<string, unknown> = {
+    scope: input.scope,
+    target_type: input.targetType,
+    panel: { items: input.panel.items, ...(input.panel.remark ? { remark: input.panel.remark } : {}) },
+  };
+  if (input.groupOpenids?.length) body['group_openids'] = input.groupOpenids.slice(0, 20);
+  const data = await openApiRequest<{ panel_id?: string }>('POST', '/v2/panels', body);
+  if (!data.panel_id) throw new Error('创建指令面板失败：响应缺少 panel_id');
+  return data.panel_id;
+}
+
+/** 覆盖面板元素与备注，不影响已关联的群 */
+export async function updateRobotPanel(panelId: string, panel: QQPanelInput): Promise<void> {
+  await openApiRequest('PUT', `/v2/panels/${encodeURIComponent(panelId)}`, {
+    panel: { items: panel.items, ...(panel.remark ? { remark: panel.remark } : {}) },
+  });
+}
+
+export async function deleteRobotPanel(panelId: string): Promise<void> {
+  await openApiRequest('DELETE', `/v2/panels/${encodeURIComponent(panelId)}`);
+}
+
+/** 增删面板关联的群（仅 group 场景）；平台单次最多 20 个 openid，超出自动分批 */
+export async function updateRobotPanelTargets(
+  panelId: string,
+  op: 'add' | 'del',
+  groupOpenids: string[],
+): Promise<void> {
+  for (let i = 0; i < groupOpenids.length; i += 20) {
+    await openApiRequest('PUT', `/v2/panels/${encodeURIComponent(panelId)}/target`, {
+      op,
+      group_openids: groupOpenids.slice(i, i + 20),
+    });
+  }
+}
+
 /** 附件下载上限，与 upload_limits 的默认口径一致，防止恶意大文件打爆磁盘 */
 const MAX_ATTACHMENT_BYTES = 200 * 1024 * 1024;
 
@@ -253,6 +375,11 @@ function isPrivateHost(hostname: string): boolean {
 
 export function applyLink(code: string): string {
   return `${PUBLIC_SITE_URL}/#/apply?code=${encodeURIComponent(code)}`;
+}
+
+/** 申请入口（不带接洽码）：指令面板 link 元素的兜底跳转 */
+export function applyEntryLink(): string {
+  return `${PUBLIC_SITE_URL}/#/apply`;
 }
 
 export function resultLink(code: string): string {

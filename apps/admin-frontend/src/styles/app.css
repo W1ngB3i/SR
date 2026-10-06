@@ -1085,6 +1085,14 @@
   font-size: 12px;
 }
 
+/* 指令面板状态：标签 + 元素数 + panel_id + 删除按钮同行排布 */
+.robot-panel__status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
 /* —— 响应式 ——
    统一断点口径（三端一致）：
      lg ≤1024  详情双栏降单栏、统计卡降列

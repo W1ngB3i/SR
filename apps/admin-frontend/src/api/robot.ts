@@ -4,13 +4,16 @@ import {
   type Page,
   type RobotIdentityDTO,
   type RobotMessageDTO,
+  type RobotPanelOverviewDTO,
+  type RobotPanelScope,
+  type RobotPanelSyncResultDTO,
   type RobotRole,
   type RobotStatusDTO,
 } from '@sr/shared';
 import { request } from './client';
 
 // ---------------------------------------------------------------------------
-// 机器人管理：身份绑定 / 接洽码绑定状态 / 消息日志（总管、副总管）
+// 机器人管理：身份绑定 / 接洽码绑定状态 / 消息日志 / 指令面板（总管、副总管）
 // ---------------------------------------------------------------------------
 
 export const fetchRobotStatus = () => request<RobotStatusDTO>(API.admin.robotStatus);
@@ -67,3 +70,12 @@ export const fetchAllContactKeys = (query: {
   page: number;
   page_size: number;
 }) => request<Page<ContactKeyDTO>>(API.admin.contactKeys, { query });
+
+export const fetchRobotPanels = () =>
+  request<RobotPanelOverviewDTO>(API.admin.robotPanels);
+
+export const syncRobotPanels = () =>
+  request<RobotPanelSyncResultDTO>(API.admin.robotPanelSync, { method: 'POST' });
+
+export const deleteRobotPanel = (scope: RobotPanelScope) =>
+  request<{ removed: number }>(API.admin.robotPanel(scope), { method: 'DELETE' });

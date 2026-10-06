@@ -66,6 +66,10 @@ export const API = {
     robotMessages: `${API_PREFIX}/admin/robot-messages`,
     robotMessageResend: (id: string) => `${API_PREFIX}/admin/robot-messages/${id}/resend`,
     robotStatus: `${API_PREFIX}/admin/robot-status`,
+    /** 指令面板（QQ /v2/panels） */
+    robotPanels: `${API_PREFIX}/admin/robot-panels`,
+    robotPanelSync: `${API_PREFIX}/admin/robot-panels/sync`,
+    robotPanel: (scope: string) => `${API_PREFIX}/admin/robot-panels/${encodeURIComponent(scope)}`,
     contactKeys: `${API_PREFIX}/admin/contact-keys`,
   },
   files: {

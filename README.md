@@ -173,7 +173,7 @@ release：reviewing / supplementing ─▶ pending_claim
 - 管理：`/admin/departments|modes|users|announcements|appeals|audit-logs|stats|config` CRUD 与读
 - 机器人（见 3.10）：
   - 平台回调（无版本前缀、无鉴权但强制验签）：`POST /api/robot/webhook`
-  - 管理（总管 / 副总管）：`GET /admin/robot-status`、`GET|POST /admin/robot-identities`、`PUT|DELETE /admin/robot-identities/:openid`、`GET /admin/robot-messages`（支持 `status` / `kind` 筛选与分页）、`POST /admin/robot-messages/:id/resend`、`GET /admin/contact-keys`（`bound=bound|unbound`）
+  - 管理（总管 / 副总管）：`GET /admin/robot-status`、`GET|POST /admin/robot-identities`、`PUT|DELETE /admin/robot-identities/:openid`、`GET /admin/robot-messages`（支持 `status` / `kind` 筛选与分页）、`POST /admin/robot-messages/:id/resend`、`GET /admin/robot-panels`（指令面板概览）、`POST /admin/robot-panels/sync`（下发 / 更新）、`DELETE /admin/robot-panels/:scope`（`c2c|group`）、`GET /admin/contact-keys`（`bound=bound|unbound`）
 
 ### 3.7 前端约定
 
@@ -209,7 +209,7 @@ Playwright 单条主链路用例：**生成接洽码 → 提交工单 → 总管
    - 「申请工单」聊天式填单：圈名 → 接洽码 → 部门 → 模式 → 模块（PE/PC/两者）→ 自证 → 证据 → 确认，提交后回复查询码；接洽码须为**本人在机器人处领取**的码（「拿接洽码」签发并绑定 openid）。
    - 「查询 <查询码>」查看进度与结果；「公示 [部门]」「规则 [部门]」「部门介绍」「帮助」为随时可用的只读指令。
 2. 审核员：在管理后台右上角复制自己的**认证 ID**（即 `user.id`），在 QQ 里发送该 ID → 绑定为对应角色与部门，新工单自动 @该部门审核员。
-3. 快捷菜单（`q.qq.com` 配置，仅单聊生效）与消息按钮点击下发 `INTERACTION_CREATE`，应用统一在指令分发器处理并在 3 秒内 `PUT /interactions/{interaction_id}` 应答。
+3. 指令面板由后台统一下发（`POST /v2/panels`），不依赖 `q.qq.com` 手工配置：单聊面板全局生效，群聊面板精准投放到「已绑定审核员所在的群」——管理端快捷菜单只覆盖单聊，群聊只能用 API 面板。面板元素与指令分发器共用同一份指令词表，有测试守护。若仍保留管理端快捷菜单，其点击回调会下发 `INTERACTION_CREATE`，应用统一在指令分发器处理并在 3 秒内 `PUT /interactions/{interaction_id}` 应答。
 
 **链路**
 
@@ -222,8 +222,9 @@ Playwright 单条主链路用例：**生成接洽码 → 提交工单 → 总管
 
 **实现要点**
 
-- Ed25519 签名 / AccessToken 缓存 / 消息发送 / 交互应答 / 附件下载在 `apps/api/src/services/qq.ts`；指令分发、只读指令、聊天式申请状态机、身份绑定与通知在 `services/robot.ts`；会话存储在 `services/robotSession.js`；接洽码签发与反查在 `services/key.ts`；QQ 附件落盘在 `services/storage.ts`。
+- Ed25519 签名 / AccessToken 缓存 / 消息发送 / 交互应答 / 附件下载 / 指令面板接口在 `apps/api/src/services/qq.ts`；指令分发、只读指令、聊天式申请状态机、身份绑定与通知在 `services/robot.ts`；会话存储在 `services/robotSession.ts`；指令面板的下发与维护在 `services/robotPanel.ts`；接洽码签发与反查在 `services/key.ts`；QQ 附件落盘在 `services/storage.ts`。
+- 指令面板以「备注」标记本系统下发的面板，每次下发都从平台查回真实状态（而不是依赖本地缓存）：单聊面板就地更新，群聊面板按当前审核群**先删后建**，保证不会残留已退出的旧群；平台侧被手工删除时（`err_code 40030006`）自动重建。
 - 进度查询的安全模型：仅凭查询码还不够，还会校验该工单的接洽码正是当前 openid 领取的，避免在 QQ 内凭码遍历他人工单。
 - 证据接收：机器人收到图片/视频后即时下载落盘（仅接受 https 且非内网地址，防 SSRF），草稿只存存储键，确认提交时随工单批量入库；群内默认收不到非 @消息的图，建议用私聊收证据，群内可回复「跳过」后到网站补充。
 - 审核员绑定采用「直接发后台认证 ID」，本期不做 OAuth 式的 openid 扫码绑定。
-- 后台「机器人管理」页三块：身份绑定（可手工增删改）、接洽码绑定状态（筛选已绑定 / 未绑定）、消息日志（筛选 + 重发）。
+- 后台「机器人管理」页四块：身份绑定（可手工增删改）、接洽码绑定状态（筛选已绑定 / 未绑定）、消息日志（筛选 + 重发）、指令面板（下发 / 更新 / 删除）。

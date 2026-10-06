@@ -34,6 +34,7 @@ import {
   updateIdentity,
 } from '../services/robot.js';
 import { robotPlatformInfo } from '../services/qq.js';
+import { removeRobotPanels, robotPanelOverview, syncRobotPanels } from '../services/robotPanel.js';
 import {
   createDepartment,
   createMode,
@@ -430,6 +431,35 @@ adminRouter.get('/robot-messages', requireRoles(...MANAGER_ROLES), (req, res, ne
 adminRouter.post('/robot-messages/:id/resend', requireRoles(...MANAGER_ROLES), async (req, res, next) => {
   try {
     sendOk(res, await resendMessage(idParam(req), actor(req)));
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** 指令面板：管理端快捷菜单只覆盖单聊，群聊面板只能由后台经 /v2/panels 下发 */
+adminRouter.get('/robot-panels', requireRoles(...MANAGER_ROLES), async (_req, res, next) => {
+  try {
+    sendOk(res, await robotPanelOverview());
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminRouter.post('/robot-panels/sync', requireRoles(...MANAGER_ROLES), async (req, res, next) => {
+  try {
+    sendOk(res, await syncRobotPanels(actor(req)));
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminRouter.delete('/robot-panels/:scope', requireRoles(...MANAGER_ROLES), async (req, res, next) => {
+  try {
+    const scope = req.params['scope'];
+    if (scope !== 'c2c' && scope !== 'group') {
+      throw ApiError.badRequest('INVALID_INPUT', '面板场景仅支持 c2c 或 group');
+    }
+    sendOk(res, await removeRobotPanels(scope, actor(req)));
   } catch (err) {
     next(err);
   }

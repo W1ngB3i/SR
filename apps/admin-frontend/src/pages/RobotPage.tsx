@@ -15,7 +15,7 @@ import {
   Typography,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined, RobotOutlined } from '@ant-design/icons';
+import { PlusOutlined, RobotOutlined, SyncOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import {
   ROBOT_MESSAGE_DIRECTION_LABELS,
@@ -26,6 +26,9 @@ import {
   type RobotIdentityDTO,
   type RobotMessageDTO,
   type RobotMessageKind,
+  type RobotPanelItemDTO,
+  type RobotPanelOverviewDTO,
+  type RobotPanelScope,
   type RobotRole,
   type RobotStatusDTO,
 } from '@sr/shared';
@@ -33,11 +36,14 @@ import { fetchDepartmentOptions } from '../api/admin';
 import {
   createRobotIdentity,
   deleteRobotIdentity,
+  deleteRobotPanel,
   fetchAllContactKeys,
   fetchRobotIdentities,
   fetchRobotMessages,
+  fetchRobotPanels,
   fetchRobotStatus,
   resendRobotMessage,
+  syncRobotPanels,
   updateRobotIdentity,
 } from '../api/robot';
 import { ApiClientError } from '../api/client';
@@ -64,6 +70,37 @@ interface IdentityFormValues {
   dept_id?: string | null;
   guild_id?: string;
 }
+
+/** 指令面板的两个场景，顺序即展示顺序 */
+const PANEL_SCOPES: { scope: RobotPanelScope; label: string }[] = [
+  { scope: 'c2c', label: '单聊面板' },
+  { scope: 'group', label: '群聊面板' },
+];
+
+const panelItemColumns: ColumnsType<RobotPanelItemDTO> = [
+  {
+    title: '类型',
+    dataIndex: 'type',
+    width: 90,
+    render: (type: RobotPanelItemDTO['type']) =>
+      type === 'command' ? <Tag color="gold">指令</Tag> : <Tag>链接</Tag>,
+  },
+  { title: '元素名', dataIndex: 'name', width: 160 },
+  { title: '说明', dataIndex: 'desc', render: (desc: string) => desc || '—' },
+  {
+    title: '点击后',
+    key: 'action',
+    width: 240,
+    render: (_, row) =>
+      row.type === 'link' ? (
+        <Typography.Text type="secondary" ellipsis={{ tooltip: row.link }}>
+          {row.link}
+        </Typography.Text>
+      ) : (
+        <Typography.Text type="secondary">填入聊天输入框（等同直接发送该指令）</Typography.Text>
+      ),
+  },
+];
 
 /** 机器人管理：身份绑定 / 接洽码绑定状态 / 消息日志 */
 export function RobotPage() {
@@ -101,6 +138,12 @@ export function RobotPage() {
   const [msgPage, setMsgPage] = useState(1);
   const [msgTotal, setMsgTotal] = useState(0);
   const [resending, setResending] = useState<string | null>(null);
+
+  // —— 指令面板 ——
+  const [panels, setPanels] = useState<RobotPanelOverviewDTO | null>(null);
+  const [panelsLoading, setPanelsLoading] = useState(false);
+  const [panelsSyncing, setPanelsSyncing] = useState(false);
+  const [panelRemoving, setPanelRemoving] = useState<RobotPanelScope | null>(null);
 
   const deptOptions = useMemo(
     () => departments.map((d) => ({ value: d.id, label: d.name })),
@@ -169,12 +212,27 @@ export function RobotPage() {
     }
   }, [msgStatus, msgKind, msgPage, message]);
 
+  const loadPanels = useCallback(async () => {
+    setPanelsLoading(true);
+    try {
+      setPanels(await fetchRobotPanels());
+    } catch (err) {
+      if (err instanceof ApiClientError) message.error(err.message);
+    } finally {
+      setPanelsLoading(false);
+    }
+  }, [message]);
+
   useEffect(() => {
     void loadStatus();
     fetchDepartmentOptions()
       .then(setDepartments)
       .catch(() => setDepartments([]));
   }, [loadStatus]);
+
+  useEffect(() => {
+    void loadPanels();
+  }, [loadPanels]);
 
   useEffect(() => {
     void loadIdentities();
@@ -274,6 +332,35 @@ export function RobotPage() {
       setResending(null);
     }
   };
+
+  const handleSyncPanels = async () => {
+    setPanelsSyncing(true);
+    try {
+      const result = await syncRobotPanels();
+      setPanels(result);
+      for (const note of result.notes) message.info(note);
+      message.success('指令面板已下发');
+    } catch (err) {
+      if (err instanceof ApiClientError) message.error(err.message);
+    } finally {
+      setPanelsSyncing(false);
+    }
+  };
+
+  const handleDeletePanel = async (scope: RobotPanelScope, label: string) => {
+    setPanelRemoving(scope);
+    try {
+      await deleteRobotPanel(scope);
+      message.success(`${label}已删除`);
+      void loadPanels();
+    } catch (err) {
+      if (err instanceof ApiClientError) message.error(err.message);
+    } finally {
+      setPanelRemoving(null);
+    }
+  };
+
+  const panelOf = (scope: RobotPanelScope) => panels?.panels.find((p) => p.scope === scope);
 
   const identityColumns: ColumnsType<RobotIdentityDTO> = [
     {
@@ -486,8 +573,8 @@ export function RobotPage() {
       <div className="page-hero">
         <h1 className="page-hero__title">机器人管理</h1>
         <p className="page-hero__desc">
-          QQ 机器人只做触发与通知：玩家在群里 @机器人 领取接洽码，审核员发送后台认证 ID 完成绑定，
-          表单填写与审核操作仍在网站端完成
+          除管理面板外的能力尽量在 QQ 内闭环：申请工单、进度查询、结果公示、审核规则、部门介绍、
+          拿接洽码与身份绑定都能在机器人里完成；接单、填回执、复核公示仍在工作台
         </p>
       </div>
 
@@ -676,6 +763,81 @@ export function RobotPage() {
                     onChange: setMsgPage,
                   }}
                   locale={{ emptyText: '暂无消息记录' }}
+                />
+              </section>
+            ),
+          },
+          {
+            key: 'panels',
+            label: '指令面板',
+            children: (
+              <section className="sr-glass detail-card">
+                <div className="contact-keys-toolbar">
+                  <Button
+                    type="primary"
+                    icon={<SyncOutlined />}
+                    loading={panelsSyncing}
+                    disabled={!panels?.configured}
+                    onClick={() => void handleSyncPanels()}
+                  >
+                    下发 / 更新面板
+                  </Button>
+                  <span className="contact-keys-toolbar__hint">
+                    平台的管理端快捷菜单只对单聊生效，群聊面板只能经开放接口下发；群聊面板投放到
+                    「已绑定审核员所在的群」，当前 {panels?.group_openids.length ?? 0} 个
+                  </span>
+                </div>
+                {panels && !panels.configured && (
+                  <Alert
+                    type="warning"
+                    showIcon
+                    style={{ marginBottom: 16 }}
+                    message="机器人凭据未配置，无法下发指令面板"
+                    description="请在服务端 .env 配置 QQ_BOT_APPID / QQ_BOT_SECRET 后重启服务"
+                  />
+                )}
+                <Descriptions column={2} size="small" className="detail-info">
+                  {PANEL_SCOPES.map(({ scope, label }) => {
+                    const panel = panelOf(scope);
+                    return (
+                      <Descriptions.Item key={scope} label={label}>
+                        {panel ? (
+                          <span className="robot-panel__status">
+                            <Tag color="success">已下发</Tag>
+                            <Typography.Text type="secondary">
+                              {panel.item_count} 个元素
+                              {panel.updated_at ? ` · ${fmtTime(panel.updated_at)}` : ''}
+                            </Typography.Text>
+                            <Typography.Text code copyable={{ tooltips: ['复制', '已复制'] }}>
+                              {panel.panel_id}
+                            </Typography.Text>
+                            <Popconfirm
+                              title={`删除${label}？`}
+                              description="删除后 QQ 内不再展示该面板，可随时重新下发"
+                              okText="删除"
+                              cancelText="取消"
+                              onConfirm={() => void handleDeletePanel(scope, label)}
+                            >
+                              <Button size="small" danger loading={panelRemoving === scope}>
+                                删除
+                              </Button>
+                            </Popconfirm>
+                          </span>
+                        ) : (
+                          <Typography.Text type="secondary">未下发</Typography.Text>
+                        )}
+                      </Descriptions.Item>
+                    );
+                  })}
+                </Descriptions>
+                <Table<RobotPanelItemDTO>
+                  rowKey="name"
+                  size="small"
+                  columns={panelItemColumns}
+                  dataSource={panels?.items ?? []}
+                  loading={panelsLoading}
+                  pagination={false}
+                  locale={{ emptyText: '暂无面板元素' }}
                 />
               </section>
             ),
