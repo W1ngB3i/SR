@@ -97,14 +97,37 @@ export function resetAccessTokenCache(): void {
   cachedToken = null;
 }
 
+/**
+ * 回复面板里的一枚按钮。
+ * type=0 跳转（打开网页）；type=1 回调（点击后平台下发 INTERACTION_CREATE，data 原样回传，
+ * 机器人据此走与文字指令相同的分发逻辑）；type=2 指令（把 data 填进聊天输入框，
+ * 旧客户端需手动按发送）。本系统主用回调型，规避客户端版本差异。
+ */
+export interface RobotKeyboardButton {
+  /** 同一条 keyboard 内唯一，平台回传时用它区分按钮 */
+  id: string;
+  /** 按钮展示文案（可以比指令更友好，不影响分发） */
+  label: string;
+  type: 0 | 1 | 2;
+  /** type=0 时为跳转链接；type=1/2 时为指令文本 */
+  data: string;
+  /** 仅 type=2 有意义：点击后是否自动发送 */
+  enter?: boolean;
+  /** 0 灰色线框（默认）、1 蓝色线框 */
+  style?: 0 | 1;
+}
+
+/** 回复面板的按钮行：平台限制最多 5 行、每行最多 5 个按钮 */
+export type RobotKeyboardRow = RobotKeyboardButton[];
+
 export interface RobotMessageBody {
   /** 群聊传 group_openid；私聊传用户 openid */
   target: { kind: 'group' | 'c2c'; openid: string };
   content: string;
   /** 被动回复必须回填平台下发的 msg_id */
   msgId?: string;
-  /** 跳转按钮（官方 Markdown/Ark 消息内嵌），留空则只发文本 */
-  button?: { label: string; url: string };
+  /** 回复面板按钮组；留空则只发文本 */
+  keyboard?: RobotKeyboardRow[];
 }
 
 /** 平台要求「同一条消息」的多个被动回复以 msg_seq 区分，此处按序号自增 */
@@ -115,25 +138,37 @@ function nextMsgSeq(msgId: string): number {
   return next;
 }
 
-/** 按钮动作：type=0 链接按钮，permission.type=2 指定链接 */
-function buildKeyboard(button: { label: string; url: string }) {
+/**
+ * 构造消息按钮组（回复面板）。
+ * 平台约定：permission.type=2 表示所有人可点；render_data 的 label / visited_label / style 必填；
+ * 跳转按钮把链接放在 action.data，并在 permission.url 上同步一份。
+ */
+export function buildKeyboard(rows: RobotKeyboardRow[]) {
   return {
     content: {
-      rows: [
-        {
-          buttons: [
-            {
-              id: 'link',
-              render_data: { label: button.label, visited_label: button.label, style: 1 },
-              action: {
-                type: 0,
-                data: button.url,
-                permission: { type: 2, url: button.url },
-              },
-            },
-          ],
-        },
-      ],
+      rows: rows.map((row) => ({
+        buttons: row.map((button) => {
+          const render_data = {
+            label: button.label,
+            visited_label: button.label,
+            style: button.style ?? 1,
+          };
+          if (button.type === 0) {
+            return {
+              id: button.id,
+              render_data,
+              action: { type: 0, data: button.data, permission: { type: 2, url: button.data } },
+            };
+          }
+          const action: Record<string, unknown> = {
+            type: button.type,
+            data: button.data,
+            permission: { type: 2 },
+          };
+          if (button.type === 2) action['enter'] = button.enter ?? false;
+          return { id: button.id, render_data, action };
+        }),
+      })),
     },
   };
 }
@@ -159,7 +194,7 @@ export async function sendRobotMessage(body: RobotMessageBody): Promise<void> {
     payload.msg_id = body.msgId;
     payload.msg_seq = nextMsgSeq(body.msgId);
   }
-  if (body.button) payload.keyboard = buildKeyboard(body.button);
+  if (body.keyboard?.length) payload.keyboard = buildKeyboard(body.keyboard);
 
   const res = await fetch(`${OPEN_API_BASE}${path}`, {
     method: 'POST',

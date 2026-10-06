@@ -24,12 +24,14 @@ import { listDepartments } from './rule.js';
 import { createTicket, listPublished, lookupTicketForOpenid } from './ticket.js';
 import {
   ackInteraction,
+  applyEntryLink,
   applyLink,
   downloadRobotAttachment,
   publishedLink,
   resultLink,
   sendRobotMessage,
   ticketLink,
+  type RobotKeyboardRow,
 } from './qq.js';
 import {
   clearSession,
@@ -364,13 +366,19 @@ interface ReplyContext {
   inboundContent: string;
 }
 
-/** 发送一条出站消息并落库；失败不抛出，转为 failed 记录供总管重发 */
+/**
+ * 发送一条出站消息并落库；失败不抛出，转为 failed 记录供总管重发。
+ * 默认给每条功能回复挂上回复面板（玩家全程点按钮即可），通知类消息可传 keyboard 覆盖。
+ */
 async function deliver(
   ctx: { target: 'group' | 'c2c'; openid: string; guildId: string; msgId?: string },
   message: {
     kind: RobotMessageKind;
     content: string;
-    button?: { label: string; url: string };
+    /** 追加在回复面板之上的动作链接行（如「去申请」「去网站查看」） */
+    action?: { label: string; url: string };
+    /** 完全自定义按钮组；传空数组表示不带按钮（通知类消息用） */
+    keyboard?: RobotKeyboardRow[];
     ticketId?: string | null;
     contactKeyId?: string | null;
   },
@@ -378,6 +386,7 @@ async function deliver(
   const isGroup = ctx.target === 'group';
   const content =
     isGroup && ctx.openid ? `<qqbot-at-user id="${ctx.openid}" /> ${message.content}` : message.content;
+  const keyboard = message.keyboard ?? replyKeyboard(message.action);
   if (!isRobotConfigured()) {
     return insertMessage({
       direction: 'out',
@@ -396,7 +405,7 @@ async function deliver(
       target: { kind: ctx.target, openid: isGroup ? ctx.guildId : ctx.openid },
       content,
       msgId: ctx.msgId,
-      button: message.button,
+      ...(keyboard.length ? { keyboard } : {}),
     });
     return insertMessage({
       direction: 'out',
@@ -457,11 +466,18 @@ export async function resendMessage(id: string, actor: AuditActor): Promise<Robo
   if (row.status !== 'failed') {
     throw ApiError.badRequest('INVALID_INPUT', '只有发送失败的消息可以重发');
   }
+  // 通知类消息本来是给审核员/申请人的定向推送，重发时不挂玩家回复面板
+  const kind = row.kind as RobotMessageKind;
+  const keyboard: RobotKeyboardRow[] | undefined =
+    kind === RobotMessageKind.TicketCreated || kind === RobotMessageKind.TicketResult
+      ? []
+      : undefined;
   const result = await deliver(
     { target: row.guild_id ? 'group' : 'c2c', openid: row.openid, guildId: row.guild_id },
     {
-      kind: row.kind as RobotMessageKind,
+      kind,
       content: row.content,
+      keyboard,
       ticketId: row.ticket_id,
       contactKeyId: row.contact_key_id,
     },
@@ -532,6 +548,72 @@ export const PANEL_COMMANDS: { name: string; desc: string }[] = [
 
 /** 指令面板的 link 元素：去网站申请页（HashRouter 必须带 /#/，否则内嵌浏览器掉回首页） */
 export const PANEL_LINK_ITEM = { name: '去网站申请', desc: '在网页端填写并上传证据' };
+
+/**
+ * 回复面板：随机器人每条功能回复出现的按钮组（与输入框上方的常驻指令面板形成双层）。
+ * label 只影响展示，可以比指令更友好（进度查询 / 结果公示）；data 才是分发依据，
+ * 必须与 PANEL_COMMANDS 及文字指令共用同一份词表（tests/robot.test.ts 有断言守护）。
+ * 平台限制：最多 5 行、每行最多 5 个按钮，id 在一条 keyboard 内唯一。
+ */
+export const REPLY_PANEL: RobotKeyboardRow[] = [
+  [
+    { id: 'apply', label: '申请工单', type: 1, data: '申请工单' },
+    { id: 'query', label: '进度查询', type: 1, data: '查询' },
+    { id: 'published', label: '结果公示', type: 1, data: '公示' },
+  ],
+  [
+    { id: 'rules', label: '审核规则', type: 1, data: '规则' },
+    { id: 'code', label: '拿接洽码', type: 1, data: '拿接洽码' },
+    { id: 'intro', label: '部门介绍', type: 1, data: '部门介绍' },
+  ],
+  [
+    { id: 'bind', label: '审核员绑定', type: 1, data: '绑定' },
+    { id: 'help', label: '帮助', type: 1, data: '帮助' },
+    { id: 'site', label: '去网站申请', type: 0, data: applyEntryLink() },
+  ],
+];
+
+/** 默认回复面板；带 action 时把动作链接行加在最上面（如「去申请」「去接单」） */
+function replyKeyboard(action?: { label: string; url: string }): RobotKeyboardRow[] {
+  if (!action) return REPLY_PANEL;
+  return [[{ id: 'action', label: action.label, type: 0, data: action.url }], ...REPLY_PANEL];
+}
+
+/** 平台对消息按钮组的硬限制：最多 5 行（每行最多 5 个另由构造方保证） */
+const MAX_KEYBOARD_ROWS = 5;
+
+/**
+ * 组装一条回复的完整按钮组：筛选行在上、回复面板在下，统一裁剪到平台 5 行上限内。
+ * 供公示 / 规则这类需要额外筛选按钮的回复使用，避免手工拼装时越界导致平台拒收。
+ */
+export function replyPanelWith(
+  filters: RobotKeyboardRow[] = [],
+  action?: { label: string; url: string },
+): RobotKeyboardRow[] {
+  return [...filters, ...replyKeyboard(action)].slice(0, MAX_KEYBOARD_ROWS);
+}
+
+/** 部门筛选按钮行：「公示 联大」/「规则 EC」等价于用户直接发送该指令 */
+function departmentFilterRow(prefix: string, departments: DepartmentDTO[]): RobotKeyboardRow {
+  return departments.slice(0, 5).map((department, index) => ({
+    id: `filter-${index}`,
+    label: department.name,
+    type: 1 as const,
+    data: `${prefix} ${department.name}`,
+  }));
+}
+
+/**
+ * 公示回复的筛选行：模块（PE/PC）与前 3 个部门挤在同一行，
+ * 与动作链接行、三行回复面板合计正好占满平台的 5 行上限。
+ */
+function publishedFilterRow(departments: DepartmentDTO[]): RobotKeyboardRow {
+  return [
+    { id: 'mod-pe', label: '只看 PE', type: 1, data: '公示 PE' },
+    { id: 'mod-pc', label: '只看 PC', type: 1, data: '公示 PC' },
+    ...departmentFilterRow('公示', departments).slice(0, 3),
+  ];
+}
 
 /** 五个部门历史与现状：口径摘自落地页设计文案 */
 const DEPARTMENT_INTRO_TEXT = [
@@ -737,7 +819,7 @@ async function handleQuery(
     return deliver(ctx, {
       kind: RobotMessageKind.QueryStatus,
       content: lines.join('\n'),
-      button: { label: '去网站查看', url: resultLink(code) },
+      action: { label: '去网站查看', url: resultLink(code) },
       ticketId: ticket.id,
     });
   } catch (err) {
@@ -745,7 +827,7 @@ async function handleQuery(
     return deliver(ctx, {
       kind: RobotMessageKind.QueryStatus,
       content: message,
-      button: { label: '去网站查询', url: resultLink(code) },
+      action: { label: '去网站查询', url: resultLink(code) },
     });
   }
 }
@@ -780,7 +862,10 @@ async function handlePublished(
   return deliver(ctx, {
     kind: RobotMessageKind.PublishedList,
     content: formatPublished(page.items, label, page.total),
-    button: { label: '去网站看公示', url: publishedLink() },
+    keyboard: replyPanelWith([publishedFilterRow(departments)], {
+      label: '去网站看公示',
+      url: publishedLink(),
+    }),
   });
 }
 
@@ -791,17 +876,27 @@ async function handleRules(
 ): Promise<RobotMessageDTO> {
   logInbound(ctx, RobotMessageKind.Rules, content);
   const departments = listDepartments(false);
+  const keyboard = replyPanelWith([departmentFilterRow('规则', departments)]);
   if (!arg) {
-    return deliver(ctx, { kind: RobotMessageKind.Rules, content: formatRulesOverview(departments) });
+    return deliver(ctx, {
+      kind: RobotMessageKind.Rules,
+      content: formatRulesOverview(departments),
+      keyboard,
+    });
   }
   const department = findDepartment(arg, departments);
   if (!department) {
     return deliver(ctx, {
       kind: RobotMessageKind.Rules,
       content: `未找到部门「${arg}」。\n${formatDepartmentList(departments)}`,
+      keyboard,
     });
   }
-  return deliver(ctx, { kind: RobotMessageKind.Rules, content: formatRulesForDepartment(department) });
+  return deliver(ctx, {
+    kind: RobotMessageKind.Rules,
+    content: formatRulesForDepartment(department),
+    keyboard,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -996,7 +1091,7 @@ async function submitApply(ctx: InboundContext, draft: ApplyDraft): Promise<Robo
     return deliver(ctx, {
       kind: RobotMessageKind.ApplyTicket,
       content: `提交成功！你的查询码是 ${result.query_code}，发送「查询 ${result.query_code}」可随时查看进度。`,
-      button: { label: '去网站查看', url: resultLink(result.query_code) },
+      action: { label: '去网站查看', url: resultLink(result.query_code) },
       ticketId: result.ticket_id,
     });
   } catch (err) {
@@ -1067,7 +1162,7 @@ async function handleIssueCode(ctx: InboundContext, content: string): Promise<Ro
   return deliver(ctx, {
     kind: RobotMessageKind.IssueCode,
     content: `这是你的接洽码 ${key.code}，点这里去申请。`,
-    button: { label: '去申请', url: applyLink(key.code) },
+    action: { label: '去申请', url: applyLink(key.code) },
     contactKeyId: key.id,
   });
 }
@@ -1259,7 +1354,10 @@ export async function notifyReviewersForTicket(ticketId: string): Promise<void> 
 
   const modeText = ticket.mode_group ? `${ticket.mode_group} ${ticket.mode_name}` : ticket.mode_name;
   const content = `新工单 ${ticket.id}，圈名 ${ticket.circle_name}，部门 ${ticket.department_name}，模式 ${modeText}，点这里接单。`;
-  const button = { label: '去接单', url: ticketLink(ticket.id) };
+  // 通知发给审核员，只挂「去接单」跳转按钮，不挂玩家回复面板
+  const keyboard: RobotKeyboardRow[] = [
+    [{ id: 'ticket', label: '去接单', type: 0, data: ticketLink(ticket.id) }],
+  ];
 
   if (reviewers.length === 0) {
     logSkipped({
@@ -1272,7 +1370,7 @@ export async function notifyReviewersForTicket(ticketId: string): Promise<void> 
   for (const reviewer of reviewers) {
     await deliver(
       { target: 'group', openid: reviewer.openid, guildId: reviewer.guild_id },
-      { kind: RobotMessageKind.TicketCreated, content, button, ticketId: ticket.id },
+      { kind: RobotMessageKind.TicketCreated, content, keyboard, ticketId: ticket.id },
     );
   }
 }
@@ -1309,7 +1407,8 @@ export async function notifyApplicantForTicket(ticketId: string): Promise<void> 
     {
       kind: RobotMessageKind.TicketResult,
       content: `工单 ${ticket.id} 审核结果：${verdict}。圈名 ${ticket.circle_name}，部门 ${ticket.department_name}。`,
-      button: { label: '查看结果', url: resultLink(binding.code) },
+      // 结果通知直给「查看结果」跳转按钮（申请人多为主动窗口外推送）
+      keyboard: [[{ id: 'result', label: '查看结果', type: 0, data: resultLink(binding.code) }]],
       ticketId: ticket.id,
     },
   );

@@ -284,6 +284,76 @@ describe('QQ 机器人：指令面板', () => {
   });
 });
 
+describe('QQ 机器人：回复面板', () => {
+  it('回复按钮的指令都能被分发器识别（点了不会没反应）', async () => {
+    const buttons = robot.REPLY_PANEL.flat().filter((button) => button.type === 1);
+    expect(buttons.length).toBeGreaterThan(0);
+    for (const button of buttons) {
+      const reply = await robot.handleInboundMessage(
+        groupCtx(`openid-reply-${button.id}`, button.data, `reply-${button.id}`),
+      );
+      expect(reply.kind, `回复按钮「${button.label}」落到了兜底分支`).not.toBe('unhandled');
+    }
+  });
+
+  it('回复面板与常驻指令面板共用同一份指令词表', () => {
+    const commands = new Set(robot.PANEL_COMMANDS.map((item) => item.name));
+    for (const button of robot.REPLY_PANEL.flat()) {
+      if (button.type !== 1) continue;
+      expect(
+        commands.has(button.data),
+        `回复按钮「${button.label}」的指令「${button.data}」不在 PANEL_COMMANDS 里`,
+      ).toBe(true);
+    }
+  });
+
+  it('回复面板满足平台配额：≤5 行、每行 ≤5 个、id 唯一、跳转带 /#/ ', () => {
+    expect(robot.REPLY_PANEL.length).toBeLessThanOrEqual(5);
+    const ids = new Set<string>();
+    for (const row of robot.REPLY_PANEL) {
+      expect(row.length).toBeLessThanOrEqual(5);
+      for (const button of row) {
+        expect(ids.has(button.id), `按钮 id 重复：${button.id}`).toBe(false);
+        ids.add(button.id);
+        // HashRouter 必须带 /#/，否则手机 QQ 内嵌浏览器会掉回首页
+        if (button.type === 0) expect(button.data).toContain('/#/');
+      }
+    }
+  });
+
+  it('附加筛选按钮后仍裁剪在 5 行以内', () => {
+    const rows = robot.replyPanelWith([
+      [{ id: 'f0', label: 'EC', type: 1, data: '规则 EC' }],
+      [{ id: 'f1', label: '联大', type: 1, data: '规则 联大' }],
+    ]);
+    expect(rows).toHaveLength(5);
+    expect(robot.replyPanelWith().length).toBe(robot.REPLY_PANEL.length);
+  });
+
+  it('buildKeyboard 生成平台要求的按钮结构（permission.type=2）', () => {
+    const rows = qq.buildKeyboard([
+      [{ id: 'a', label: '查询', type: 1, data: '查询' }],
+      [{ id: 'b', label: '去网站申请', type: 0, data: 'http://x/#/apply' }],
+    ]).content.rows as unknown as {
+      buttons: {
+        render_data: { label: string; visited_label: string; style: number };
+        action: { type: number; data: string; permission: { type: number; url?: string } };
+      }[];
+    }[];
+    expect(rows).toHaveLength(2);
+    const callback = rows[0]!.buttons[0]!;
+    expect(callback.render_data).toEqual({ label: '查询', visited_label: '查询', style: 1 });
+    expect(callback.action.type).toBe(1);
+    expect(callback.action.data).toBe('查询');
+    expect(callback.action.permission.type).toBe(2);
+
+    const link = rows[1]!.buttons[0]!;
+    expect(link.action.type).toBe(0);
+    expect(link.action.data).toBe('http://x/#/apply');
+    expect(link.action.permission.url).toBe('http://x/#/apply');
+  });
+});
+
 describe('QQ 机器人：只读指令', () => {
   it('帮助菜单列出全部指令', async () => {
     const reply = await robot.handleInboundMessage(groupCtx('openid-help-1', '帮助'));
