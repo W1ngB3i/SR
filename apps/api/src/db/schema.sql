@@ -192,3 +192,16 @@ CREATE TABLE IF NOT EXISTS robot_message (
 CREATE INDEX IF NOT EXISTS idx_robot_message_created ON robot_message(created_at);
 CREATE INDEX IF NOT EXISTS idx_robot_message_status ON robot_message(status);
 CREATE INDEX IF NOT EXISTS idx_robot_message_ticket ON robot_message(ticket_id);
+
+-- 机器人引导式申请会话：记录玩家人机一问一答的中间状态，落库重启不丢
+-- 同一 openid 在群聊与私聊各自维护一份草稿，故以 openid + target 作主键
+CREATE TABLE IF NOT EXISTS robot_session (
+  openid     TEXT NOT NULL,
+  target     TEXT NOT NULL CHECK (target IN ('group','c2c')),
+  step       TEXT NOT NULL,
+  draft      TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (openid, target)
+);
+CREATE INDEX IF NOT EXISTS idx_robot_session_updated ON robot_session(updated_at);

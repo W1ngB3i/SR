@@ -27,7 +27,14 @@ import { writeAudit, type AuditActor } from './audit.js';
 import { getConfig } from './config.js';
 import { isContactKeyBound } from './key.js';
 import { notifyApplicantForTicket, notifyReviewersForTicket } from './robot.js';
-import { attachmentPhysicalPath, attachmentsForTicket, cleanupFiles, saveAttachmentMeta } from './storage.js';
+import {
+  attachmentPhysicalPath,
+  attachmentsForTicket,
+  cleanupFiles,
+  saveAttachmentMeta,
+  saveStoredAttachmentMeta,
+  type StoredEvidence,
+} from './storage.js';
 
 interface TicketRow {
   id: string;
@@ -166,6 +173,7 @@ function assertTransition(from: TicketStatus, to: TicketStatus): void {
 export function createTicket(
   input: SubmitTicketInput,
   files: Express.Multer.File[],
+  storedEvidence: StoredEvidence[] = [],
 ): { ticket_id: string; query_code: string } {
   const db = getDb();
   const cooldownHours = getConfig('submission_cooldown_hours');
@@ -234,7 +242,9 @@ export function createTicket(
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending_claim', ?, ?)`,
     ).run(id, queryCode, input.circle_name, input.department_id, input.module, input.mode_id, input.self_proof ? 1 : 0, input.contact, now, now);
     for (const file of files) saveAttachmentMeta(id, file);
-    addEvent(id, 'submitted', { id: null, name: input.circle_name }, files.length > 0 ? `附带 ${files.length} 份证据` : '未上传自证材料');
+    for (const evidence of storedEvidence) saveStoredAttachmentMeta(id, evidence);
+    const evidenceCount = files.length + storedEvidence.length;
+    addEvent(id, 'submitted', { id: null, name: input.circle_name }, evidenceCount > 0 ? `附带 ${evidenceCount} 份证据` : '未上传自证材料');
     writeAudit({
       operator: { id: null, name: input.circle_name },
       action: 'ticket.create',
@@ -263,6 +273,31 @@ export function lookupTicket(circleName: string, queryCode: string): {
     .get(queryCode, circleName) as JoinedRow | undefined;
   if (!row) {
     throw ApiError.notFound(BizCode.InvalidQueryCode, '圈名与查询码不匹配，请核对后重试');
+  }
+  return {
+    ticket: toSummary(row),
+    receipt: loadReceipt(row.id),
+    events: loadEvents(row.id),
+  };
+}
+
+/**
+ * QQ 机器人进度查询：只凭查询码，但要求该工单的接洽码正是当前 openid 领取的，
+ * 避免在 QQ 内凭查询码遍历他人工单。
+ */
+export function lookupTicketForOpenid(
+  queryCode: string,
+  openid: string,
+): { ticket: TicketSummaryDTO; receipt: ReceiptDTO | null; events: TicketEventDTO[] } {
+  const row = getDb()
+    .prepare(`${BASE_SELECT} WHERE t.query_code = ?`)
+    .get(queryCode) as JoinedRow | undefined;
+  if (!row) throw ApiError.notFound(BizCode.InvalidQueryCode, '查询码不存在，请核对后重试');
+  const owner = getDb()
+    .prepare('SELECT bind_openid FROM contact_key WHERE used_ticket_id = ? LIMIT 1')
+    .get(row.id) as { bind_openid: string | null } | undefined;
+  if (!owner?.bind_openid || owner.bind_openid !== openid) {
+    throw ApiError.notFound(BizCode.InvalidQueryCode, '该查询码不是你在机器人处提交的工单，无法查询');
   }
   return {
     ticket: toSummary(row),
@@ -877,6 +912,7 @@ function publishLocked(id: string, row: JoinedRow, actor: AuditActor): void {
 
 export function listPublished(filters: {
   department_id?: string;
+  module?: string;
   keyword?: string;
   page: number;
   pageSize: number;
@@ -887,6 +923,10 @@ export function listPublished(filters: {
   if (filters.department_id) {
     where.push('t.department_id = ?');
     params.push(filters.department_id);
+  }
+  if (filters.module) {
+    where.push('t.module = ?');
+    params.push(filters.module);
   }
   if (filters.keyword) {
     where.push('(d.name LIKE ? OR m.name LIKE ? OR m.group_name LIKE ?)');

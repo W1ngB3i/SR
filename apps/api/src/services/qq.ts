@@ -175,6 +175,74 @@ export async function sendRobotMessage(body: RobotMessageBody): Promise<void> {
   }
 }
 
+/**
+ * 回应交互事件（按钮回调 type=11 / 快捷菜单回调 type=12）。
+ * 平台要求 3 秒内 PUT 应答，否则客户端一直 loading；应答后业务照常另发消息。
+ */
+export async function ackInteraction(interactionId: string): Promise<void> {
+  if (!isRobotConfigured()) throw new Error('机器人凭据未配置（QQ_BOT_APPID / QQ_BOT_SECRET）');
+  const token = await getAccessToken();
+  const res = await fetch(`${OPEN_API_BASE}/interactions/${encodeURIComponent(interactionId)}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `QQBot ${token}`,
+      'X-Union-Appid': QQ_BOT_APPID,
+    },
+    body: JSON.stringify({ code: 0 }),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`交互应答失败：HTTP ${res.status}${text ? ` ${text.slice(0, 200)}` : ''}`);
+  }
+}
+
+/** 附件下载上限，与 upload_limits 的默认口径一致，防止恶意大文件打爆磁盘 */
+const MAX_ATTACHMENT_BYTES = 200 * 1024 * 1024;
+
+/**
+ * 下载 QQ 平台下发的图片/视频附件（事件里的 attachments[].url）。
+ * 只接受 https 且非内网主机的公开地址，避免被伪造回调引向内网（SSRF）。
+ */
+export async function downloadRobotAttachment(
+  url: string,
+): Promise<{ buffer: Buffer; contentType: string }> {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error('附件地址无效');
+  }
+  if (parsed.protocol !== 'https:') throw new Error('附件地址不是 https，已拒绝下载');
+  if (isPrivateHost(parsed.hostname)) throw new Error('附件地址指向内网，已拒绝下载');
+
+  const res = await fetch(url, { redirect: 'follow' });
+  if (!res.ok) throw new Error(`下载附件失败：HTTP ${res.status}`);
+  const declared = Number(res.headers.get('content-length') ?? 0);
+  if (declared > MAX_ATTACHMENT_BYTES) throw new Error('附件超过大小限制');
+  const buffer = Buffer.from(await res.arrayBuffer());
+  if (buffer.byteLength > MAX_ATTACHMENT_BYTES) throw new Error('附件超过大小限制');
+  return { buffer, contentType: (res.headers.get('content-type') ?? '').toLowerCase() };
+}
+
+/** 判定主机是否为回环 / 内网 / 链路本地地址（含字面量 IP 与常见内网域名后缀） */
+function isPrivateHost(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  if (host === 'localhost' || host.endsWith('.local') || host.endsWith('.internal')) return true;
+  if (host.startsWith('[')) return true; // IPv6 字面量一律拒绝，平台附件不会用
+  const ipv4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (!ipv4) return false;
+  const [a, b] = [Number(ipv4[1]), Number(ipv4[2])];
+  return (
+    a === 0 ||
+    a === 10 ||
+    a === 127 ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168)
+  );
+}
+
 // ---------------------------------------------------------------------------
 // 按钮链接（与用户端 / 管理端路由一一对应）
 //
@@ -189,6 +257,11 @@ export function applyLink(code: string): string {
 
 export function resultLink(code: string): string {
   return `${PUBLIC_SITE_URL}/#/query?code=${encodeURIComponent(code)}`;
+}
+
+/** 结果公示页（QQ 内查看公示列表的兜底入口） */
+export function publishedLink(): string {
+  return `${PUBLIC_SITE_URL}/#/published`;
 }
 
 export function ticketLink(ticketId: string): string {

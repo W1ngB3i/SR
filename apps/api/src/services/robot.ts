@@ -1,19 +1,46 @@
 import {
+  DEVICE_NOTES,
+  MODULE_LABELS,
   ROBOT_ROLE_LABELS,
   RobotMessageKind,
   RobotRole,
+  STATUS_LABELS,
+  type DepartmentDTO,
+  type DeviceModule,
+  type Page,
+  type PublicityItemDTO,
   type RobotIdentityDTO,
   type RobotMessageDTO,
   type RobotMessageStatus,
-  type Page,
 } from '@sr/shared';
 import { getDb } from '../db/index.js';
 import { newId, nowIso } from '../lib/ids.js';
 import { ApiError } from '../lib/errors.js';
 import { isRobotConfigured } from '../env.js';
 import { writeAudit, type AuditActor } from './audit.js';
+import { getConfig } from './config.js';
 import { getStaffUserById } from './user.js';
-import { applyLink, resultLink, sendRobotMessage, ticketLink } from './qq.js';
+import { listDepartments } from './rule.js';
+import { createTicket, listPublished, lookupTicketForOpenid } from './ticket.js';
+import {
+  ackInteraction,
+  applyLink,
+  downloadRobotAttachment,
+  publishedLink,
+  resultLink,
+  sendRobotMessage,
+  ticketLink,
+} from './qq.js';
+import {
+  clearSession,
+  getSession,
+  saveSession,
+  type ApplyDraft,
+  type RobotEvidence,
+  type RobotSession,
+  type RobotSessionStep,
+} from './robotSession.js';
+import { persistEvidenceBuffer } from './storage.js';
 import { ROBOT_ISSUER_NAME, findApplicantBinding, issueContactKeyForOpenid } from './key.js';
 
 /**
@@ -458,9 +485,59 @@ export async function resendMessage(id: string, actor: AuditActor): Promise<Robo
 const AUTH_ID_RE = /usr[-_][A-Za-z0-9_-]{4,}/;
 /** 请求接洽码的关键词 */
 const CODE_INTENT_RE = /(接洽码|拿码|要码|申请码|来个码)/;
+/** 进入聊天式引导申请 */
+const APPLY_RE = /^(申请工单|我要申请|申请|\/apply)$/;
+/** 作废当前申请草稿 */
+const CANCEL_RE = /^(取消|作废|退出|\/cancel)$/i;
+/** 帮助 / 指令清单 */
+const HELP_RE = /^(帮助|菜单|指令|help|\/help|\?|？)$/i;
+/** 部门介绍 */
+const DEPT_INTRO_RE = /^(部门介绍|sr\s*历史|公会历史|部门历史)$/i;
+/** 进度查询：查询 / 进度 + 可选查询码 */
+const QUERY_RE = /^(?:查询|进度)\s*([A-Za-z0-9]{4,12})?$/;
+/** 结果公示：公示 / 公示 + 可选部门名或 PE/PC */
+const PUBLISHED_RE = /^(?:公示|结果公示)\s*(.*)$/;
+/** 审核规则：规则 / 规则 + 可选部门名 */
+const RULES_RE = /^(?:规则|标准|难度)\s*(.*)$/;
 
-const HELP_TEXT =
-  '我可以帮你做两件事：\n1. 玩家发送「拿接洽码」，我会给你一个一次性接洽码和申请入口；\n2. 审核员发送后台个人中心的认证 ID，我会把你绑定为对应部门的审核员。';
+const HELP_TEXT = [
+  '可用指令（群聊请先 @我，私聊直接发送）：',
+  '· 申请工单 —— 聊天式填单，在 QQ 内完成申请',
+  '· 查询 <查询码> —— 查看工单进度与结果',
+  '· 公示 [部门] —— 查看最近结果公示（如：公示 联大）',
+  '· 规则 [部门] —— 查看部门难度与审核标准（如：规则 EC）',
+  '· 部门介绍 —— 五个部门历史与现状',
+  '· 拿接洽码 —— 领取一次性接洽码',
+  '· 绑定 <后台认证 ID> —— 审核员完成身份绑定',
+].join('\n');
+
+/** 五个部门历史与现状：口径摘自落地页设计文案 */
+const DEPARTMENT_INTRO_TEXT = [
+  'SR 公会五大部门：',
+  '01 SR_Party（起点 · Misaki）—— 公会最早的班底，2021 年 Misaki 国际服一战由它主导。',
+  '02 SR_Team（布吉岛 · Java）—— 前身是花雨庭部门，椿枕、逗号、神迹、PWG、立法人（TDA）都在这里待过。',
+  '03 SR_Group（联机大厅）—— 岚天殿在此铸下名号，川狱、焚天殿、MERC、白川、PAS、YFS、Lgs、茗门相继加入。',
+  '04 SR_Arrow（租赁服）—— 在红铁、Ltier 圈子里有一席之地，大规模公会战随时能拉人打。',
+  '05 SR_Explore（开拓）—— 开拓部门，政审模式，联系 323992228。',
+].join('\n');
+
+/** 平台 content_type → 文件后缀，用于 QQ 附件落盘命名 */
+const EXT_BY_CONTENT_TYPE: Record<string, string> = {
+  'image/png': '.png',
+  'image/jpeg': '.jpg',
+  'image/webp': '.webp',
+  'image/gif': '.gif',
+  'video/mp4': '.mp4',
+  'video/quicktime': '.mov',
+  'video/webm': '.webm',
+};
+
+/** 入站消息携带的图片/视频附件（平台 attachments[]） */
+export interface InboundAttachment {
+  url: string;
+  content_type: string;
+  filename?: string;
+}
 
 export interface InboundContext {
   target: 'group' | 'c2c';
@@ -471,98 +548,626 @@ export interface InboundContext {
   /** 平台下发的消息 ID，用于被动回复 */
   msgId: string;
   content: string;
+  /** 图片/视频附件，用于证据接收 */
+  attachments?: InboundAttachment[];
+  /** 交互事件 id：按钮 / 快捷菜单回调需在 3 秒内 PUT 应答 */
+  interactionId?: string;
 }
 
 /**
- * 处理一条 @机器人 的入站消息。
- * 只响应 @它 的消息：拿接洽码、审核员注册。
+ * 入站消息统一入口：菜单回调、群内 @、私聊三种来源共用同一套分发逻辑。
+ * 顺序：交互应答 → 打断型指令（绑定/拿码）→ 显式申请 → 申请会话 → 只读指令 → 兜底。
  */
 export async function handleInboundMessage(ctx: InboundContext): Promise<RobotMessageDTO> {
+  // 按钮 / 快捷菜单回调需在 3 秒内应答，失败只记日志、不阻断后续回复
+  if (ctx.interactionId) {
+    try {
+      await ackInteraction(ctx.interactionId);
+    } catch (err) {
+      console.error('[robot] 交互应答失败:', err);
+    }
+  }
+
   const content = ctx.content.trim();
-  const authIdMatch = content.match(AUTH_ID_RE);
+  const hasAttachments = (ctx.attachments?.length ?? 0) > 0;
 
-  // 审核员注册：直接发后台个人中心的认证 ID
-  if (authIdMatch) {
-    const userId = authIdMatch[0];
-    insertMessage({
-      direction: 'in',
-      kind: RobotMessageKind.ReviewerBind,
-      status: 'received',
-      openid: ctx.openid,
-      guildId: ctx.guildId,
-      content,
-    });
-    const user = getStaffUserById(userId);
-    if (!user) {
-      return deliver(ctx, {
-        kind: RobotMessageKind.ReviewerBind,
-        content: `认证 ID「${userId}」不存在，请到网站后台个人中心核对后重发。`,
-      });
-    }
-    if (user.status !== 'active') {
-      return deliver(ctx, {
-        kind: RobotMessageKind.ReviewerBind,
-        content: `账号「${user.name}」已停用，无法绑定，请联系审核总管。`,
-      });
-    }
-    const robotRole = toRobotRole(user.role);
-    if (!robotRole) {
-      return deliver(ctx, {
-        kind: RobotMessageKind.ReviewerBind,
-        content: `认证 ID「${userId}」对应的账号不是审核员角色，无法绑定。`,
-      });
-    }
-    // 重绑时保留后台已补录的信息：机器人侧拿不到 QQ 号，系统侧账号也可能还没配部门
-    const previous = getDb()
-      .prepare('SELECT qq_number, dept_id FROM robot_identities WHERE openid = ?')
-      .get(ctx.openid) as { qq_number: string; dept_id: string | null } | undefined;
-    writeIdentity(
-      {
-        openid: ctx.openid,
-        qq_number: previous?.qq_number ?? '',
-        role: robotRole,
-        dept_id: user.department_id ?? previous?.dept_id ?? null,
-        user_id: user.id,
-        guild_id: ctx.guildId,
-        source: 'bot',
-      },
-      null,
-    );
-    const deptText = user.department_name ? `${user.department_name} ` : '';
-    return deliver(ctx, {
-      kind: RobotMessageKind.ReviewerBind,
-      content: `已绑定为${deptText}${ROBOT_ROLE_LABELS[robotRole]} ${user.name}，新工单将自动 @你。`,
-    });
+  // 1. 打断型指令：审核员绑定 / 拿接洽码 —— 优先于申请流程，并作废当前草稿
+  if (AUTH_ID_RE.test(content)) {
+    clearSession(ctx.openid, ctx.target);
+    return handleReviewerBind(ctx, content);
   }
-
-  // 玩家拿接洽码
   if (CODE_INTENT_RE.test(content)) {
-    insertMessage({
-      direction: 'in',
-      kind: RobotMessageKind.IssueCode,
-      status: 'received',
-      openid: ctx.openid,
-      guildId: ctx.guildId,
-      content,
-    });
-    const key = issueContactKeyForOpenid(ctx.openid, ctx.guildId);
+    clearSession(ctx.openid, ctx.target);
+    return handleIssueCode(ctx, content);
+  }
+
+  // 2. 显式申请入口：重置并从头开始
+  if (APPLY_RE.test(content)) return startApply(ctx, content);
+
+  // 3. 显式取消：仅在存在草稿时响应，否则按普通未知消息兜底
+  if (CANCEL_RE.test(content)) {
+    const active = getSession(ctx.openid, ctx.target);
+    if (active) {
+      clearSession(ctx.openid, ctx.target);
+      logInbound(ctx, RobotMessageKind.ApplyTicket, content);
+      return deliver(ctx, {
+        kind: RobotMessageKind.ApplyTicket,
+        content: '已取消本次申请，草稿已作废。发送「申请工单」可重新开始。',
+      });
+    }
+  }
+
+  // 4. 申请会话进行中：只读指令可穿插查看，其余输入一律交给当前步骤处理（含纯附件消息）
+  const session = getSession(ctx.openid, ctx.target);
+  if (session && !isReadOnlyCommand(content)) {
+    return handleApplyStep(ctx, session, content);
+  }
+
+  // 5. 只读指令
+  if (HELP_RE.test(content)) return handleHelp(ctx, content);
+  if (DEPT_INTRO_RE.test(content)) return handleDepartmentIntro(ctx, content);
+  const queryMatch = content.match(QUERY_RE);
+  if (queryMatch) return handleQuery(ctx, content, (queryMatch[1] ?? '').toUpperCase());
+  const publishedMatch = content.match(PUBLISHED_RE);
+  if (publishedMatch) return handlePublished(ctx, content, (publishedMatch[1] ?? '').trim());
+  const rulesMatch = content.match(RULES_RE);
+  if (rulesMatch) return handleRules(ctx, content, (rulesMatch[1] ?? '').trim());
+
+  // 6. 未进入申请流程却发来图片/视频：明确引导，避免证据丢失
+  if (hasAttachments) {
+    logInbound(ctx, RobotMessageKind.Evidence, content || '[图片/视频]');
     return deliver(ctx, {
-      kind: RobotMessageKind.IssueCode,
-      content: `这是你的接洽码 ${key.code}，点这里去申请。`,
-      button: { label: '去申请', url: applyLink(key.code) },
-      contactKeyId: key.id,
+      kind: RobotMessageKind.Evidence,
+      content:
+        '收到你的图片/视频了。请先发送「申请工单」进入申请流程，再在证据步骤发送，我才会把它作为工单证据入库。',
     });
   }
 
+  // 7. 兜底
+  logInbound(ctx, RobotMessageKind.Unhandled, content);
+  return deliver(ctx, { kind: RobotMessageKind.Unhandled, content: HELP_TEXT });
+}
+
+/** 只读指令：不打断正在进行的申请会话，可随时穿插查看 */
+function isReadOnlyCommand(content: string): boolean {
+  return (
+    HELP_RE.test(content) ||
+    DEPT_INTRO_RE.test(content) ||
+    QUERY_RE.test(content) ||
+    PUBLISHED_RE.test(content) ||
+    RULES_RE.test(content)
+  );
+}
+
+/** 记一条入站消息（各指令按语义归入对应 kind，便于后台排查） */
+function logInbound(ctx: InboundContext, kind: RobotMessageKind, content: string): void {
   insertMessage({
     direction: 'in',
-    kind: RobotMessageKind.Unhandled,
+    kind,
     status: 'received',
     openid: ctx.openid,
     guildId: ctx.guildId,
     content,
   });
-  return deliver(ctx, { kind: RobotMessageKind.Unhandled, content: HELP_TEXT });
+}
+
+// ---------------------------------------------------------------------------
+// 只读指令：帮助 / 部门介绍 / 进度查询 / 结果公示 / 审核规则
+// ---------------------------------------------------------------------------
+
+async function handleHelp(ctx: InboundContext, content: string): Promise<RobotMessageDTO> {
+  logInbound(ctx, RobotMessageKind.Help, content);
+  return deliver(ctx, { kind: RobotMessageKind.Help, content: HELP_TEXT });
+}
+
+async function handleDepartmentIntro(ctx: InboundContext, content: string): Promise<RobotMessageDTO> {
+  logInbound(ctx, RobotMessageKind.DepartmentIntro, content);
+  return deliver(ctx, { kind: RobotMessageKind.DepartmentIntro, content: DEPARTMENT_INTRO_TEXT });
+}
+
+async function handleQuery(
+  ctx: InboundContext,
+  content: string,
+  code: string,
+): Promise<RobotMessageDTO> {
+  logInbound(ctx, RobotMessageKind.QueryStatus, content);
+  if (!code) {
+    return deliver(ctx, {
+      kind: RobotMessageKind.QueryStatus,
+      content: '请回复「查询 + 查询码」，例如：查询 AB2CDE。',
+    });
+  }
+  if (!/^[A-Z2-9]{8}$/.test(code)) {
+    return deliver(ctx, {
+      kind: RobotMessageKind.QueryStatus,
+      content: '查询码为 8 位大写字母或数字，请核对后重新发送。',
+    });
+  }
+  try {
+    const { ticket, receipt } = lookupTicketForOpenid(code, ctx.openid);
+    const lines = [
+      `工单 ${ticket.id}`,
+      `状态：${STATUS_LABELS[ticket.status]}`,
+      `部门：${ticket.department_name}｜模式：${ticket.mode_group ? `${ticket.mode_group} ` : ''}${ticket.mode_name}`,
+      `模块：${MODULE_LABELS[ticket.module]}｜自证：${ticket.self_proof ? '有' : '无'}`,
+    ];
+    if (ticket.assignee_name) lines.push(`审核员：${ticket.assignee_name}`);
+    if (ticket.status === 'supplementing' && ticket.supplement_reason) {
+      lines.push(`需补充：${ticket.supplement_reason}`);
+    }
+    if (receipt && !receipt.is_draft) {
+      const grades = [
+        receipt.pe_grade ? `PE ${receipt.pe_grade}` : '',
+        receipt.pc_grade ? `PC ${receipt.pc_grade}` : '',
+      ]
+        .filter(Boolean)
+        .join('／');
+      lines.push(
+        `结果：${receipt.pass ? '通过' : '不通过'}${receipt.target_department ? `，可进入 ${receipt.target_department}` : ''}`,
+      );
+      if (grades) lines.push(`成绩：${grades}`);
+      if (receipt.comment) lines.push(`评语：${receipt.comment}`);
+    }
+    return deliver(ctx, {
+      kind: RobotMessageKind.QueryStatus,
+      content: lines.join('\n'),
+      button: { label: '去网站查看', url: resultLink(code) },
+      ticketId: ticket.id,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : '查询失败，请稍后重试。';
+    return deliver(ctx, {
+      kind: RobotMessageKind.QueryStatus,
+      content: message,
+      button: { label: '去网站查询', url: resultLink(code) },
+    });
+  }
+}
+
+async function handlePublished(
+  ctx: InboundContext,
+  content: string,
+  arg: string,
+): Promise<RobotMessageDTO> {
+  logInbound(ctx, RobotMessageKind.PublishedList, content);
+  const departments = listDepartments(false);
+  const filters: { department_id?: string; module?: string } = {};
+  let label = '全部部门';
+  if (arg) {
+    const upper = arg.toUpperCase();
+    if (upper === 'PE' || upper === 'PC' || upper === 'BOTH') {
+      filters.module = upper;
+      label = MODULE_LABELS[upper as DeviceModule];
+    } else {
+      const department = findDepartment(arg, departments);
+      if (!department) {
+        return deliver(ctx, {
+          kind: RobotMessageKind.PublishedList,
+          content: `未找到部门「${arg}」。\n${formatDepartmentList(departments)}`,
+        });
+      }
+      filters.department_id = department.id;
+      label = department.name;
+    }
+  }
+  const page = listPublished({ ...filters, page: 1, pageSize: 10 });
+  return deliver(ctx, {
+    kind: RobotMessageKind.PublishedList,
+    content: formatPublished(page.items, label, page.total),
+    button: { label: '去网站看公示', url: publishedLink() },
+  });
+}
+
+async function handleRules(
+  ctx: InboundContext,
+  content: string,
+  arg: string,
+): Promise<RobotMessageDTO> {
+  logInbound(ctx, RobotMessageKind.Rules, content);
+  const departments = listDepartments(false);
+  if (!arg) {
+    return deliver(ctx, { kind: RobotMessageKind.Rules, content: formatRulesOverview(departments) });
+  }
+  const department = findDepartment(arg, departments);
+  if (!department) {
+    return deliver(ctx, {
+      kind: RobotMessageKind.Rules,
+      content: `未找到部门「${arg}」。\n${formatDepartmentList(departments)}`,
+    });
+  }
+  return deliver(ctx, { kind: RobotMessageKind.Rules, content: formatRulesForDepartment(department) });
+}
+
+// ---------------------------------------------------------------------------
+// 聊天式引导申请：一问一答状态机
+// ---------------------------------------------------------------------------
+
+async function startApply(ctx: InboundContext, content: string): Promise<RobotMessageDTO> {
+  logInbound(ctx, RobotMessageKind.ApplyTicket, content);
+  saveSession(ctx.openid, ctx.target, 'circle_name', {});
+  return deliver(ctx, {
+    kind: RobotMessageKind.ApplyTicket,
+    content: '开始申请工单（全程可回复「取消」作废）。\n第 1 步：请发送你在游戏内使用的圈名（不超过 24 个字）。',
+  });
+}
+
+async function handleApplyStep(
+  ctx: InboundContext,
+  session: RobotSession,
+  content: string,
+): Promise<RobotMessageDTO> {
+  const draft: ApplyDraft = { ...session.draft };
+  const reply = (text: string) =>
+    deliver(ctx, { kind: RobotMessageKind.ApplyTicket, content: text });
+  const advance = (step: RobotSessionStep) => saveSession(ctx.openid, ctx.target, step, draft);
+
+  switch (session.step) {
+    case 'circle_name': {
+      const circleName = content.trim();
+      if (!circleName || circleName.length > 24) {
+        return reply('圈名不能为空且不超过 24 个字，请重新发送。');
+      }
+      draft.circle_name = circleName;
+      advance('contact');
+      return reply('第 2 步：请发送接洽码（还没有的话，先发送「拿接洽码」领取）。');
+    }
+    case 'contact': {
+      const code = content.trim().toUpperCase();
+      if (!/^[A-Z2-9]{6}$/.test(code)) {
+        return reply('接洽码为 6 位大写字母或数字，请核对后重新发送。');
+      }
+      const row = getDb()
+        .prepare('SELECT status, bind_openid FROM contact_key WHERE code = ?')
+        .get(code) as { status: string; bind_openid: string | null } | undefined;
+      if (!row) return reply('接洽码不存在，请核对后重新发送，或发送「拿接洽码」领取新码。');
+      if (row.status !== 'unused') return reply('该接洽码已被使用，请发送「拿接洽码」领取新码。');
+      if (!row.bind_openid || row.bind_openid !== ctx.openid) {
+        return reply(
+          '该接洽码不是你在机器人处领取的，无法用于 QQ 申请。请发送「拿接洽码」领取属于你的码，或改用网站申请。',
+        );
+      }
+      draft.contact = code;
+      const departments = listDepartments(false);
+      if (departments.length === 0) return reply('当前没有可申请的部门，请稍后再试。');
+      advance('department');
+      return reply(`第 3 步：请选择审核部门（回复编号或名称）：\n${formatDepartmentList(departments)}`);
+    }
+    case 'department': {
+      const departments = listDepartments(false);
+      const index = pickIndex(content, departments.length);
+      const department = index !== null ? departments[index] : findDepartment(content, departments);
+      if (!department) {
+        return reply(`没有找到该部门，请回复编号或部门名称：\n${formatDepartmentList(departments)}`);
+      }
+      if (department.modes.length === 0) {
+        return reply(`「${department.name}」暂未配置审核模式，请回复「取消」后换个部门，或联系审核总管。`);
+      }
+      draft.department_id = department.id;
+      draft.department_name = department.name;
+      advance('mode');
+      return reply(`第 4 步：请选择审核模式（回复编号或名称）：\n${formatModeList(department)}`);
+    }
+    case 'mode': {
+      const department = listDepartments(false).find((d) => d.id === draft.department_id);
+      if (!department) {
+        clearSession(ctx.openid, ctx.target);
+        return reply('申请会话已失效，请重新发送「申请工单」开始。');
+      }
+      const index = pickIndex(content, department.modes.length);
+      const keyword = content.trim().toLowerCase();
+      const mode =
+        index !== null
+          ? department.modes[index]
+          : department.modes.find((m) => keyword.length > 0 && m.name.toLowerCase().includes(keyword));
+      if (!mode) return reply(`没有找到该模式，请回复编号或名称：\n${formatModeList(department)}`);
+      draft.mode_id = mode.id;
+      draft.mode_name = mode.name;
+      advance('module');
+      return reply('第 5 步：请选择审核模块（回复编号或名称）：\n1. PE（触屏）\n2. PC（键鼠）\n3. 两者（双端）');
+    }
+    case 'module': {
+      const module = parseModule(content);
+      if (!module) return reply('请回复 1/PE（触屏）、2/PC（键鼠）或 3/两者（双端）。');
+      draft.module = module;
+      advance('self_proof');
+      return reply('第 6 步：是否有自证（本人操作视频，画面含手部或设备）？回复「有」或「无」。');
+    }
+    case 'self_proof': {
+      const selfProof = parseYesNo(content);
+      if (selfProof === null) return reply('请回复「有」或「无」。');
+      draft.self_proof = selfProof;
+      draft.evidence = draft.evidence ?? [];
+      advance('evidence');
+      const hint =
+        ctx.target === 'group'
+          ? '（群聊收图需群主开启「获取群内全部消息」；收不到时可回复「跳过」，提交后到网站补充）'
+          : '';
+      return reply(
+        `第 7 步：请直接发送图片/视频作为证据（最多 ${maxEvidence()} 个）${hint}，或回复「跳过」。`,
+      );
+    }
+    case 'evidence': {
+      if (/^(跳过|skip|没有|无|none)$/i.test(content.trim())) {
+        return showConfirm(ctx, draft);
+      }
+      const attachments = ctx.attachments ?? [];
+      if (attachments.length === 0) return reply('请发送图片/视频作为证据，或回复「跳过」。');
+      const limit = maxEvidence();
+      const evidence = draft.evidence ?? [];
+      const failures: string[] = [];
+      for (const attachment of attachments) {
+        if (evidence.length >= limit) break;
+        try {
+          evidence.push(await storeInboundAttachment(attachment));
+        } catch (err) {
+          failures.push(err instanceof Error ? err.message : '下载失败');
+        }
+      }
+      draft.evidence = evidence;
+      if (evidence.length >= limit) return showConfirm(ctx, draft);
+      advance('evidence');
+      const suffix = failures.length > 0 ? `\n（${failures.length} 个附件未能保存：${failures[0]}）` : '';
+      return reply(`已收到 ${evidence.length}/${limit} 份证据，可继续发送，或回复「跳过」进入确认。${suffix}`);
+    }
+    case 'confirm': {
+      if (/^(确认|提交|确定|yes|ok|\/confirm)$/i.test(content.trim())) {
+        return submitApply(ctx, draft);
+      }
+      if (CANCEL_RE.test(content.trim())) {
+        clearSession(ctx.openid, ctx.target);
+        return reply('已取消本次申请，草稿已作废。');
+      }
+      return reply('请回复「确认」提交，或回复「取消」作废。');
+    }
+    default: {
+      clearSession(ctx.openid, ctx.target);
+      return reply('申请会话异常，请重新发送「申请工单」开始。');
+    }
+  }
+}
+
+/** 证据步骤收尾（跳过或已达上限）：保存草稿并展示确认摘要 */
+async function showConfirm(ctx: InboundContext, draft: ApplyDraft): Promise<RobotMessageDTO> {
+  saveSession(ctx.openid, ctx.target, 'confirm', draft);
+  return deliver(ctx, { kind: RobotMessageKind.ApplyTicket, content: applySummary(draft) });
+}
+
+/** 确认提交：调用与网站一致的 createTicket，复用冷却期/校验/审核员通知 */
+async function submitApply(ctx: InboundContext, draft: ApplyDraft): Promise<RobotMessageDTO> {
+  const { circle_name, contact, department_id, mode_id, module } = draft;
+  const missing: string[] = [];
+  if (!circle_name) missing.push('圈名');
+  if (!contact) missing.push('接洽码');
+  if (!department_id) missing.push('部门');
+  if (!mode_id) missing.push('模式');
+  if (!module) missing.push('模块');
+  if (!circle_name || !contact || !department_id || !mode_id || !module) {
+    saveSession(ctx.openid, ctx.target, 'circle_name', {});
+    return deliver(ctx, {
+      kind: RobotMessageKind.ApplyTicket,
+      content: `申请信息不完整（缺少：${missing.join('、')}），请重新发送「申请工单」开始。`,
+    });
+  }
+  try {
+    const result = createTicket(
+      {
+        circle_name,
+        department_id,
+        mode_id,
+        module,
+        self_proof: draft.self_proof ?? false,
+        contact,
+      },
+      [],
+      (draft.evidence ?? []).map((item) => ({
+        filename: item.filename,
+        kind: item.kind,
+        storageKey: item.storage_key,
+        size: item.size,
+      })),
+    );
+    clearSession(ctx.openid, ctx.target);
+    return deliver(ctx, {
+      kind: RobotMessageKind.ApplyTicket,
+      content: `提交成功！你的查询码是 ${result.query_code}，发送「查询 ${result.query_code}」可随时查看进度。`,
+      button: { label: '去网站查看', url: resultLink(result.query_code) },
+      ticketId: result.ticket_id,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : '提交失败，请稍后重试。';
+    return deliver(ctx, { kind: RobotMessageKind.ApplyTicket, content: `提交未成功：${message}` });
+  }
+}
+
+async function handleReviewerBind(ctx: InboundContext, content: string): Promise<RobotMessageDTO> {
+  const userId = content.match(AUTH_ID_RE)![0];
+  logInbound(ctx, RobotMessageKind.ReviewerBind, content);
+  const user = getStaffUserById(userId);
+  if (!user) {
+    return deliver(ctx, {
+      kind: RobotMessageKind.ReviewerBind,
+      content: `认证 ID「${userId}」不存在，请到网站后台个人中心核对后重发。`,
+    });
+  }
+  if (user.status !== 'active') {
+    return deliver(ctx, {
+      kind: RobotMessageKind.ReviewerBind,
+      content: `账号「${user.name}」已停用，无法绑定，请联系审核总管。`,
+    });
+  }
+  const robotRole = toRobotRole(user.role);
+  if (!robotRole) {
+    return deliver(ctx, {
+      kind: RobotMessageKind.ReviewerBind,
+      content: `认证 ID「${userId}」对应的账号不是审核员角色，无法绑定。`,
+    });
+  }
+  // 重绑时保留后台已补录的信息：机器人侧拿不到 QQ 号，系统侧账号也可能还没配部门
+  const previous = getDb()
+    .prepare('SELECT qq_number, dept_id FROM robot_identities WHERE openid = ?')
+    .get(ctx.openid) as { qq_number: string; dept_id: string | null } | undefined;
+  writeIdentity(
+    {
+      openid: ctx.openid,
+      qq_number: previous?.qq_number ?? '',
+      role: robotRole,
+      dept_id: user.department_id ?? previous?.dept_id ?? null,
+      user_id: user.id,
+      guild_id: ctx.guildId,
+      source: 'bot',
+    },
+    null,
+  );
+  const deptText = user.department_name ? `${user.department_name} ` : '';
+  return deliver(ctx, {
+    kind: RobotMessageKind.ReviewerBind,
+    content: `已绑定为${deptText}${ROBOT_ROLE_LABELS[robotRole]} ${user.name}，新工单将自动 @你。`,
+  });
+}
+
+async function handleIssueCode(ctx: InboundContext, content: string): Promise<RobotMessageDTO> {
+  logInbound(ctx, RobotMessageKind.IssueCode, content);
+  const key = issueContactKeyForOpenid(ctx.openid, ctx.guildId);
+  return deliver(ctx, {
+    kind: RobotMessageKind.IssueCode,
+    content: `这是你的接洽码 ${key.code}，点这里去申请。`,
+    button: { label: '去申请', url: applyLink(key.code) },
+    contactKeyId: key.id,
+  });
+}
+
+/** 下载 QQ 附件并落盘，返回随草稿暂存的证据描述 */
+async function storeInboundAttachment(attachment: InboundAttachment): Promise<RobotEvidence> {
+  const { buffer, contentType } = await downloadRobotAttachment(attachment.url);
+  const extension = EXT_BY_CONTENT_TYPE[contentType] ?? '.bin';
+  const filename = attachment.filename || `qq-evidence-${newId('ev')}${extension}`;
+  const kindHint = contentType.startsWith('image/')
+    ? 'image'
+    : contentType.startsWith('video/')
+      ? 'video'
+      : undefined;
+  const stored = persistEvidenceBuffer(buffer, filename, kindHint);
+  return {
+    filename: stored.filename,
+    kind: stored.kind,
+    storage_key: stored.storageKey,
+    size: stored.size,
+  };
+}
+
+function maxEvidence(): number {
+  return Math.max(1, getConfig('upload_limits').max_files);
+}
+
+/** 按编号或名称模糊匹配部门（如「联大」→「联大逐梦起源」） */
+function findDepartment(query: string, departments: DepartmentDTO[]): DepartmentDTO | null {
+  const keyword = query.trim().toLowerCase();
+  if (!keyword) return null;
+  const exact = departments.find((department) => department.name.toLowerCase() === keyword);
+  if (exact) return exact;
+  return (
+    departments.find((department) => department.name.toLowerCase().includes(keyword)) ??
+    departments.find((department) => keyword.includes(department.name.toLowerCase())) ??
+    null
+  );
+}
+
+/** 输入为 1..count 的序号则返回其下标，否则返回 null */
+function pickIndex(content: string, count: number): number | null {
+  const value = Number(content.trim());
+  return Number.isInteger(value) && value >= 1 && value <= count ? value - 1 : null;
+}
+
+function parseModule(content: string): DeviceModule | null {
+  const value = content.trim().toLowerCase();
+  if (['1', 'pe', '触屏', '手机', 'ipad'].includes(value)) return 'PE';
+  if (['2', 'pc', '键鼠', '电脑'].includes(value)) return 'PC';
+  if (['3', 'both', '两者', '双端', '都'].includes(value)) return 'BOTH';
+  return null;
+}
+
+function parseYesNo(content: string): boolean | null {
+  const value = content.trim().toLowerCase();
+  if (['有', '是', '1', 'yes', 'y', 'true'].includes(value)) return true;
+  if (['无', '否', '没有', '0', 'no', 'n', 'false'].includes(value)) return false;
+  return null;
+}
+
+function formatDepartmentList(departments: DepartmentDTO[]): string {
+  return departments
+    .map((department, index) => `${index + 1}. ${department.name}${department.tier ? `（${department.tier}）` : ''}`)
+    .join('\n');
+}
+
+function formatModeList(department: DepartmentDTO): string {
+  return department.modes
+    .map(
+      (mode, index) =>
+        `${index + 1}. ${mode.group_name ? `${mode.group_name} ` : ''}${mode.name}${mode.min_requirement ? `（${mode.min_requirement}）` : ''}`,
+    )
+    .join('\n');
+}
+
+function formatPublished(items: PublicityItemDTO[], label: string, total: number): string {
+  if (items.length === 0) return `${label}暂无公示结果。`;
+  const lines = [`${label}最近公示（共 ${total} 条，展示 ${items.length} 条）：`];
+  for (const item of items) {
+    const grades = [
+      item.pe_grade ? `PE ${item.pe_grade}` : '',
+      item.pc_grade ? `PC ${item.pc_grade}` : '',
+    ]
+      .filter(Boolean)
+      .join('／');
+    lines.push(
+      `· ${item.circle_name_masked}｜${item.department_name}${item.mode_name}｜${item.pass ? '通过' : '不通过'}${grades ? `｜${grades}` : ''}`,
+    );
+  }
+  return lines.join('\n');
+}
+
+function formatRulesOverview(departments: DepartmentDTO[]): string {
+  const lines = [
+    '审核规则总览：',
+    '设备界定：',
+    ...DEVICE_NOTES.map((note) => `  - ${note}`),
+    '难度档位：B+ Tier / B- Tier / C+ Tier / 政审',
+    '部门与模式（回复「规则 + 部门名」看详情）：',
+  ];
+  for (const department of departments) {
+    const modes = department.modes.map((mode) => mode.name).join(' / ') || '待补充';
+    lines.push(`  · ${department.name}${department.tier ? `（${department.tier}）` : ''}：${modes}`);
+  }
+  return lines.join('\n');
+}
+
+function formatRulesForDepartment(department: DepartmentDTO): string {
+  const lines = [`${department.name}${department.tier ? `（${department.tier}）` : ''}`];
+  if (department.description) lines.push(department.description);
+  if (department.contact) lines.push(`联系方式：${department.contact}`);
+  lines.push('审核模式：');
+  if (department.modes.length === 0) lines.push('  · 暂未配置');
+  for (const mode of department.modes) {
+    lines.push(
+      `  · ${mode.group_name ? `${mode.group_name} ` : ''}${mode.name}${mode.min_requirement ? `（${mode.min_requirement}）` : ''}`,
+    );
+  }
+  lines.push('设备界定：');
+  for (const note of DEVICE_NOTES) lines.push(`  - ${note}`);
+  return lines.join('\n');
+}
+
+function applySummary(draft: ApplyDraft): string {
+  return [
+    '请确认工单信息：',
+    `圈名：${draft.circle_name ?? '-'}`,
+    `接洽码：${draft.contact ?? '-'}`,
+    `部门：${draft.department_name ?? '-'}`,
+    `模式：${draft.mode_name ?? '-'}`,
+    `模块：${draft.module ? MODULE_LABELS[draft.module] : '-'}`,
+    `自证：${draft.self_proof ? '有' : '无'}`,
+    `证据：${draft.evidence?.length ?? 0} 份`,
+    '回复「确认」提交，或回复「取消」作废。',
+  ].join('\n');
 }
 
 /** 系统角色 → 机器人角色；系统管理员不参与审核，不绑定 */

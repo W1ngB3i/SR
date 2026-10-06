@@ -97,6 +97,13 @@ export const ROBOT_MESSAGE_KIND_LABELS: Record<RobotMessageKind, string> = {
   reviewer_bind: '审核员绑定',
   ticket_created: '@审核员新工单',
   ticket_result: '@申请人结果',
+  apply_ticket: '引导申请工单',
+  query_status: '进度查询',
+  published_list: '结果公示',
+  rules: '审核规则',
+  department_intro: '部门介绍',
+  help: '帮助',
+  evidence: '接收证据',
   unhandled: '未识别',
 };
 

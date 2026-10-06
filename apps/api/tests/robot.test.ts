@@ -226,3 +226,104 @@ describe('QQ 机器人：后台管理', () => {
     expect(status.issuer_name).toBe(key.ROBOT_ISSUER_NAME);
   });
 });
+
+describe('QQ 机器人：只读指令', () => {
+  it('帮助菜单列出全部指令', async () => {
+    const reply = await robot.handleInboundMessage(groupCtx('openid-help-1', '帮助'));
+    expect(reply.kind).toBe('help');
+    expect(reply.content).toContain('申请工单');
+    expect(reply.content).toContain('查询');
+    expect(reply.content).toContain('公示');
+    expect(reply.content).toContain('规则');
+  });
+
+  it('部门介绍返回五大部门', async () => {
+    const reply = await robot.handleInboundMessage(groupCtx('openid-dept-1', '部门介绍'));
+    expect(reply.kind).toBe('department_intro');
+    expect(reply.content).toContain('SR_Party');
+    expect(reply.content).toContain('SR_Explore');
+  });
+
+  it('规则总览包含设备界定与部门清单', async () => {
+    const reply = await robot.handleInboundMessage(groupCtx('openid-rules-1', '规则'));
+    expect(reply.kind).toBe('rules');
+    expect(reply.content).toContain('设备界定');
+    expect(reply.content).toContain('EC');
+  });
+
+  it('未配置凭据时结果公示也照常返回内容', async () => {
+    const reply = await robot.handleInboundMessage(groupCtx('openid-pub-1', '公示'));
+    expect(reply.kind).toBe('published_list');
+    expect(reply.content).toContain('公示');
+  });
+});
+
+describe('QQ 机器人：聊天式申请', () => {
+  it('一问一答完成申请、生成工单并可凭查询码查看进度', async () => {
+    const openid = 'openid-apply-1';
+    await robot.handleInboundMessage(groupCtx(openid, '拿接洽码', 'a0'));
+    const code = boundCodeOf(openid);
+
+    expect((await robot.handleInboundMessage(groupCtx(openid, '申请工单', 'a1'))).content).toContain('圈名');
+    expect((await robot.handleInboundMessage(groupCtx(openid, '机器人测试圈', 'a2'))).content).toContain('接洽码');
+    expect((await robot.handleInboundMessage(groupCtx(openid, code, 'a3'))).content).toContain('部门');
+    expect((await robot.handleInboundMessage(groupCtx(openid, 'EC', 'a4'))).content).toContain('模式');
+    expect((await robot.handleInboundMessage(groupCtx(openid, '1', 'a5'))).content).toContain('模块');
+    expect((await robot.handleInboundMessage(groupCtx(openid, '1', 'a6'))).content).toContain('自证');
+    expect((await robot.handleInboundMessage(groupCtx(openid, '无', 'a7'))).content).toContain('证据');
+    expect((await robot.handleInboundMessage(groupCtx(openid, '跳过', 'a8'))).content).toContain('确认');
+
+    const done = await robot.handleInboundMessage(groupCtx(openid, '确认', 'a9'));
+    expect(done.kind).toBe('apply_ticket');
+    expect(done.content).toContain('提交成功');
+    expect(done.ticket_id).toBeTruthy();
+
+    const queryCode = done.content.match(/[A-Z2-9]{8}/)?.[0];
+    expect(queryCode).toBeTruthy();
+    const status = await robot.handleInboundMessage(groupCtx(openid, `查询 ${queryCode}`, 'a10'));
+    expect(status.content).toContain('工单');
+    expect(status.content).toContain('状态');
+
+    // 他人拿同一个查询码查不到（QQ 内不允许遍历他人工单）
+    const foreign = await robot.handleInboundMessage(groupCtx('openid-apply-other', `查询 ${queryCode}`, 'a11'));
+    expect(foreign.content).toContain('无法查询');
+  });
+
+  it('申请过程中回复「取消」作废草稿', async () => {
+    const openid = 'openid-apply-2';
+    await robot.handleInboundMessage(groupCtx(openid, '申请工单', 'c1'));
+    const reply = await robot.handleInboundMessage(groupCtx(openid, '取消', 'c2'));
+    expect(reply.content).toContain('已取消');
+  });
+
+  it('接洽码不属于当前用户时拒绝进入下一步', async () => {
+    const openid = 'openid-apply-3';
+    const other = 'openid-apply-4';
+    await robot.handleInboundMessage(groupCtx(other, '拿接洽码', 'x0'));
+    const foreignCode = boundCodeOf(other);
+
+    await robot.handleInboundMessage(groupCtx(openid, '申请工单', 'x1'));
+    await robot.handleInboundMessage(groupCtx(openid, '冒用测试圈', 'x2'));
+    const reply = await robot.handleInboundMessage(groupCtx(openid, foreignCode, 'x3'));
+    expect(reply.content).toContain('不是你在机器人处领取的');
+  });
+
+  it('群内收到附件但下载失败时给出提示且不中断流程', async () => {
+    const openid = 'openid-apply-5';
+    await robot.handleInboundMessage(groupCtx(openid, '拿接洽码', 'd0'));
+    const code = boundCodeOf(openid);
+    await robot.handleInboundMessage(groupCtx(openid, '申请工单', 'd1'));
+    await robot.handleInboundMessage(groupCtx(openid, '附件测试圈', 'd2'));
+    await robot.handleInboundMessage(groupCtx(openid, code, 'd3'));
+    await robot.handleInboundMessage(groupCtx(openid, 'EC', 'd4'));
+    await robot.handleInboundMessage(groupCtx(openid, '1', 'd5'));
+    await robot.handleInboundMessage(groupCtx(openid, '1', 'd6'));
+    await robot.handleInboundMessage(groupCtx(openid, '无', 'd7'));
+
+    const reply = await robot.handleInboundMessage({
+      ...groupCtx(openid, '', 'd8'),
+      attachments: [{ url: 'http://insecure.example/a.png', content_type: 'image/png' }],
+    });
+    expect(reply.content).toContain('未能保存');
+  });
+});

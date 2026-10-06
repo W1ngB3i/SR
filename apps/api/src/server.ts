@@ -2,6 +2,7 @@ import { createApp } from './app.js';
 import { IS_PRODUCTION, PORT, ensureDirs } from './env.js';
 import { getDb, closeDb } from './db/index.js';
 import { seedBase, seedDemoTickets } from './db/seed.js';
+import { pruneExpiredSessions } from './services/robotSession.js';
 
 function main() {
   ensureDirs();
@@ -17,6 +18,10 @@ function main() {
       seedDemoTickets(true);
     }
   }
+
+  // 启动时清一次超时的机器人申请草稿（30 分钟未续期即作废），此后由会话读写时惰性清理
+  const pruned = pruneExpiredSessions();
+  if (pruned > 0) console.log(`[api] 已清理 ${pruned} 条超时的机器人申请会话`);
 
   const app = createApp();
   const server = app.listen(PORT, () => {

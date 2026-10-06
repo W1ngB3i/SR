@@ -85,6 +85,47 @@ export function saveAttachmentMeta(
   };
 }
 
+/** 已落盘的证据描述：QQ 机器人下载附件后随草稿暂存，确认提交时批量入库 */
+export interface StoredEvidence {
+  filename: string;
+  kind: 'image' | 'video' | 'other';
+  storageKey: string;
+  size: number;
+}
+
+/** 登记一条已落盘的证据到 attachment 表 */
+export function saveStoredAttachmentMeta(ticketId: string, evidence: StoredEvidence): void {
+  getDb()
+    .prepare(
+      `INSERT INTO attachment (id, ticket_id, kind, filename, storage_key, size, uploaded_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(newId('att'), ticketId, evidence.kind, evidence.filename, evidence.storageKey, evidence.size, nowIso());
+}
+
+/**
+ * 把内存中的附件（QQ 平台下载所得）落盘并返回入库描述。
+ * kindHint 取自平台 content_type，优先于按文件名后缀判定。
+ */
+export function persistEvidenceBuffer(
+  buffer: Buffer,
+  filename: string,
+  kindHint?: 'image' | 'video' | 'other',
+): StoredEvidence {
+  const ext = path.extname(filename).toLowerCase();
+  const dir = path.join(STORAGE_DIR, new Date().toISOString().slice(0, 7));
+  fs.mkdirSync(dir, { recursive: true });
+  const key = `${newId('file')}${ext}`;
+  const fullPath = path.join(dir, key);
+  fs.writeFileSync(fullPath, buffer);
+  return {
+    filename,
+    kind: kindHint ?? detectKind(filename),
+    storageKey: path.relative(STORAGE_DIR, fullPath).replaceAll('\\', '/'),
+    size: buffer.byteLength,
+  };
+}
+
 interface AttachmentRow {
   id: string;
   ticket_id: string;

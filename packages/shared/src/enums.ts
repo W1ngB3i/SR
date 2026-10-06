@@ -99,6 +99,20 @@ export const RobotMessageKind = {
   TicketCreated: 'ticket_created',
   /** 工单公示后 @申请人推送结果 */
   TicketResult: 'ticket_result',
+  /** 聊天式引导申请工单（含状态机各步往来） */
+  ApplyTicket: 'apply_ticket',
+  /** 凭查询码查询工单进度 */
+  QueryStatus: 'query_status',
+  /** 按部门/模块查看最近结果公示 */
+  PublishedList: 'published_list',
+  /** 按部门查看审核规则与难度标准 */
+  Rules: 'rules',
+  /** 五个部门历史与现状 */
+  DepartmentIntro: 'department_intro',
+  /** 指令清单与使用示例 */
+  Help: 'help',
+  /** 入站消息携带的图片/视频证据 */
+  Evidence: 'evidence',
   /** 无法识别或处理失败的入站消息 */
   Unhandled: 'unhandled',
 } as const;
