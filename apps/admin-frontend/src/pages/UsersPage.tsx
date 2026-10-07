@@ -272,7 +272,7 @@ export function UsersPage() {
       </div>
 
       <div className="sr-glass pool-table">
-        <Table<StaffUserDTO> rowKey="id" columns={columns} dataSource={users} loading={loading} pagination={false} />
+        <Table<StaffUserDTO> rowKey="id" columns={columns} dataSource={users} loading={loading} scroll={{ x: 1300 }} pagination={false} />
       </div>
 
       <Modal

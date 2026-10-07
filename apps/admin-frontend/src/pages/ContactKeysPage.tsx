@@ -97,6 +97,7 @@ export function ContactKeysPage() {
           columns={columns}
           dataSource={keys}
           loading={loading}
+          scroll={{ x: 700 }}
           pagination={false}
           locale={{ emptyText: '还没有生成过接洽码' }}
         />

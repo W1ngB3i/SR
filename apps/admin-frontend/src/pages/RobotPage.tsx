@@ -589,7 +589,7 @@ export function RobotPage() {
             description="当前不会真正投递消息，仅记录消息日志。请在服务端 .env 配置 QQ_BOT_APPID / QQ_BOT_SECRET 后重启服务"
           />
         )}
-        <Descriptions column={4} size="small" className="detail-info">
+        <Descriptions column={{ xs: 1, sm: 2, md: 4 }} size="small" className="detail-info">
           <Descriptions.Item label="凭据">
             {status?.configured ? <Tag color="success">已接通</Tag> : <Tag color="error">未配置</Tag>}
           </Descriptions.Item>
@@ -700,6 +700,7 @@ export function RobotPage() {
                   columns={keyColumns}
                   dataSource={keys}
                   loading={keysLoading}
+                  scroll={{ x: 900 }}
                   pagination={{
                     current: keysPage,
                     pageSize: 20,
@@ -796,7 +797,7 @@ export function RobotPage() {
                     description="请在服务端 .env 配置 QQ_BOT_APPID / QQ_BOT_SECRET 后重启服务"
                   />
                 )}
-                <Descriptions column={2} size="small" className="detail-info">
+                <Descriptions column={{ xs: 1, sm: 2 }} size="small" className="detail-info">
                   {PANEL_SCOPES.map(({ scope, label }) => {
                     const panel = panelOf(scope);
                     return (
@@ -836,6 +837,7 @@ export function RobotPage() {
                   columns={panelItemColumns}
                   dataSource={panels?.items ?? []}
                   loading={panelsLoading}
+                  scroll={{ x: 800 }}
                   pagination={false}
                   locale={{ emptyText: '暂无面板元素' }}
                 />

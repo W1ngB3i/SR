@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   AuditOutlined,
@@ -8,6 +8,7 @@ import {
   KeyOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
+  MenuOutlined,
   MenuUnfoldOutlined,
   NotificationOutlined,
   RobotOutlined,
@@ -33,6 +34,12 @@ export function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+  /** 手机端侧栏改为抽屉：默认收起，选中导航后自动关闭 */
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [location.pathname]);
 
   const navItems = useMemo<NavItem[]>(() => {
     const role = user?.role as StaffRole | undefined;
@@ -56,7 +63,7 @@ export function AdminLayout() {
   };
 
   return (
-    <div className={`admin-shell ${collapsed ? 'is-collapsed' : ''}`}>
+    <div className={`admin-shell ${collapsed ? 'is-collapsed' : ''} ${drawerOpen ? 'is-drawer-open' : ''}`}>
       <aside className="admin-sider sr-glass">
         <div className="admin-sider__brand" onClick={() => navigate('/')} role="button" tabIndex={0}>
           <img src="/logo.png" alt="SR" className="admin-sider__mark-img" />
@@ -91,8 +98,24 @@ export function AdminLayout() {
         </button>
       </aside>
 
+      {drawerOpen && (
+        <div
+          className="admin-scrim"
+          role="presentation"
+          onClick={() => setDrawerOpen(false)}
+        />
+      )}
+
       <div className="admin-body">
         <header className="admin-header">
+          <button
+            type="button"
+            className="admin-header__menu"
+            aria-label="打开导航"
+            onClick={() => setDrawerOpen((v) => !v)}
+          >
+            <MenuOutlined />
+          </button>
           <div className="admin-header__breadcrumb">
             {navItems.find((item) => location.pathname.startsWith(item.path))?.label ?? '工作台'}
           </div>

@@ -502,13 +502,13 @@ const AUTH_ID_RE = /usr[-_][A-Za-z0-9_-]{4,}/;
 /** 请求接洽码的关键词 */
 const CODE_INTENT_RE = /(接洽码|拿码|要码|申请码|来个码)/;
 /** 进入聊天式引导申请 */
-const APPLY_RE = /^(申请工单|我要申请|申请|\/apply)$/;
+const APPLY_RE = /^(申请工单|我要申请|申请|apply)$/i;
 /** 作废当前申请草稿 */
-const CANCEL_RE = /^(取消|作废|退出|\/cancel)$/i;
+const CANCEL_RE = /^(取消|作废|退出|cancel)$/i;
 /** 请求绑定审核员身份（指令面板「绑定」元素与文字指令共用） */
 const BIND_INTENT_RE = /^(绑定|绑定身份|审核员绑定|认证|认证\s*id)$/i;
 /** 帮助 / 指令清单 */
-const HELP_RE = /^(帮助|菜单|指令|help|\/help|\?|？)$/i;
+const HELP_RE = /^(帮助|菜单|指令|help|\?|？)$/i;
 /** 部门介绍 */
 const DEPT_INTRO_RE = /^(部门介绍|sr\s*历史|公会历史|部门历史)$/i;
 /** 进度查询：查询 / 进度 + 可选查询码 */
@@ -672,7 +672,8 @@ export async function handleInboundMessage(ctx: InboundContext): Promise<RobotMe
     }
   }
 
-  const content = ctx.content.trim();
+  // 平台玩家习惯带前导斜杠（/申请工单、/help），统一剥离后再分发，避免落入兜底回帮助列表
+  const content = ctx.content.trim().replace(/^\/+/, '');
   const hasAttachments = (ctx.attachments?.length ?? 0) > 0;
 
   // 1. 打断型指令：审核员绑定 / 拿接洽码 —— 优先于申请流程，并作废当前草稿
@@ -1031,7 +1032,7 @@ async function handleApplyStep(
       return reply(`已收到 ${evidence.length}/${limit} 份证据，可继续发送，或回复「跳过」进入确认。${suffix}`);
     }
     case 'confirm': {
-      if (/^(确认|提交|确定|yes|ok|\/confirm)$/i.test(content.trim())) {
+      if (/^(确认|提交|确定|yes|ok|confirm)$/i.test(content.trim())) {
         return submitApply(ctx, draft);
       }
       if (CANCEL_RE.test(content.trim())) {

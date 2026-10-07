@@ -278,6 +278,7 @@ export function RulesAdminPage() {
           columns={deptColumns}
           dataSource={departments}
           loading={loading}
+          scroll={{ x: 900 }}
           pagination={false}
           expandable={{
             expandedRowRender: (dept) => (
@@ -286,6 +287,7 @@ export function RulesAdminPage() {
                 columns={modeColumnsFor(dept)}
                 dataSource={dept.modes}
                 pagination={false}
+                scroll={{ x: 700 }}
                 size="small"
                 className="rules-modes-table"
               />

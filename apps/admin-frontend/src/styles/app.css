@@ -2,6 +2,66 @@
    审核员端 / 管理后台样式：深空玻璃体系（与申请人端同源）
    ============================================================ */
 
+/* —— 全局基线：显式清掉浏览器默认外边距，避免 100vh 元素被顶出视口 —— */
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100%;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* —— 弹窗：限制在视口内，内容区独立滚动，表单底部按钮始终可达 —— */
+.ant-modal {
+  max-width: calc(100vw - 24px);
+}
+
+.ant-modal .ant-modal-content {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 24px);
+}
+
+.ant-modal .ant-modal-body {
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* —— 手机端导航开关（桌面隐藏） —— */
+.admin-header__menu {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  margin-right: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--sr-text-mid);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.admin-scrim {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  background: rgba(4, 5, 9, 0.62);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
 /* —— 整体骨架：侧栏 + 主体 —— */
 .admin-shell {
   min-height: 100vh;
@@ -139,6 +199,7 @@
 }
 
 .admin-header__breadcrumb {
+  margin-right: auto;
   font-size: 13px;
   letter-spacing: 0.1em;
   color: var(--sr-text-low);
@@ -1096,7 +1157,7 @@
 /* —— 响应式 ——
    统一断点口径（三端一致）：
      lg ≤1024  详情双栏降单栏、统计卡降列
-     md ≤768   侧栏转图标栏、窄屏表格横向滚动（Table scroll.x）、触控目标 ≥44px
+     md ≤768   侧栏转左侧抽屉、窄屏表格横向滚动（Table scroll.x）、触控目标 ≥44px
      sm ≤480   手机紧凑 */
 @media (max-width: 1024px) {
   .detail-grid {
@@ -1129,33 +1190,58 @@
     min-height: 0;
   }
 
-  /* 小屏固定为图标栏形态，避免挤压内容区 */
-  .admin-sider,
-  .admin-shell .admin-sider {
-    width: 64px;
+  /* 手机端：侧栏改为左侧抽屉，收起后内容区独占整宽（不再挤压表格与表单） */
+  .admin-header__menu {
+    display: inline-flex;
   }
 
-  .admin-sider__name,
-  .admin-nav__label {
-    display: none;
+  .admin-scrim {
+    display: block;
+  }
+
+  .admin-sider,
+  .admin-shell .admin-sider,
+  .admin-shell.is-collapsed .admin-sider {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 130;
+    width: min(76vw, 268px);
+    height: 100vh;
+    height: 100dvh;
+    border-radius: 0;
+    transform: translateX(-100%);
+    transition: transform var(--sr-dur-mid) var(--sr-ease);
+  }
+
+  .admin-shell.is-drawer-open .admin-sider {
+    transform: translateX(0);
   }
 
   .admin-nav__item {
-    justify-content: center;
-    padding: 11px 0;
-  }
-
-  .admin-sider__brand {
-    justify-content: center;
-    padding: 20px 8px 16px;
+    padding: 12px;
   }
 
   .admin-sider__collapse {
     display: none;
   }
 
+  /* 抽屉收起时不应拦截点击 */
+  .admin-shell:not(.is-drawer-open) .admin-sider {
+    pointer-events: none;
+  }
+
+  .admin-shell.is-drawer-open .admin-sider {
+    pointer-events: auto;
+  }
+
   .admin-header {
     padding: 0 16px;
+  }
+
+  /* 详情页头：返回 / 标题 / 管理操作在窄屏换行，避免按钮被挤到无法点击 */
+  .detail-head {
+    flex-wrap: wrap;
   }
 
   .admin-main {
@@ -1202,6 +1288,34 @@
 
   .detail-card {
     padding: 18px 16px;
+  }
+
+  /* 极窄屏：成绩双列会挤到无法操作，回执/复核按钮组允许换行 */
+  .detail-receipt__grades {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-receipt__actions {
+    flex-wrap: wrap;
+  }
+
+  .admin-header__logout span {
+    display: none;
+  }
+
+  /* 头部空间紧张时先压缩面包屑与认证 ID，避免把用户区挤出视口 */
+  .admin-header__breadcrumb {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .admin-header__auth-id {
+    max-width: 92px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 }
 

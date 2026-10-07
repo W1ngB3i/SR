@@ -168,7 +168,7 @@ export function AnnouncementsPage() {
       </div>
 
       <div className="sr-glass pool-table">
-        <Table<AnnouncementDTO> rowKey="id" columns={columns} dataSource={items} loading={loading} pagination={false} />
+        <Table<AnnouncementDTO> rowKey="id" columns={columns} dataSource={items} loading={loading} scroll={{ x: 900 }} pagination={false} />
       </div>
 
       <Modal

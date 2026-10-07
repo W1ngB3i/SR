@@ -385,6 +385,35 @@ describe('QQ 机器人：只读指令', () => {
   });
 });
 
+describe('QQ 机器人：斜杠指令', () => {
+  it('带前导斜杠的指令与不带斜杠等价，不再落到帮助列表', async () => {
+    const cases: { input: string; kind: string }[] = [
+      { input: '/申请工单', kind: 'apply_ticket' },
+      { input: '/apply', kind: 'apply_ticket' },
+      { input: '/帮助', kind: 'help' },
+      { input: '/help', kind: 'help' },
+      { input: '/部门介绍', kind: 'department_intro' },
+      { input: '/规则', kind: 'rules' },
+      { input: '/公示', kind: 'published_list' },
+      { input: '/查询', kind: 'query_status' },
+    ];
+    for (const [index, item] of cases.entries()) {
+      const reply = await robot.handleInboundMessage(
+        groupCtx(`openid-slash-${index}`, item.input, `slash-${index}`),
+      );
+      expect(reply.kind, `「${item.input}」未命中分发`).toBe(item.kind);
+      expect(reply.kind, `「${item.input}」落到了兜底帮助`).not.toBe('unhandled');
+    }
+  });
+
+  it('斜杠取消同样能作废草稿', async () => {
+    const openid = 'openid-slash-cancel';
+    await robot.handleInboundMessage(groupCtx(openid, '/申请工单', 'sc1'));
+    const reply = await robot.handleInboundMessage(groupCtx(openid, '/cancel', 'sc2'));
+    expect(reply.content).toContain('已取消');
+  });
+});
+
 describe('QQ 机器人：聊天式申请', () => {
   it('一问一答完成申请、生成工单并可凭查询码查看进度', async () => {
     const openid = 'openid-apply-1';
