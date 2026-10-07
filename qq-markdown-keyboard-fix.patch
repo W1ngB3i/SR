@@ -1,0 +1,28 @@
+diff --git a/apps/api/src/services/qq.ts b/apps/api/src/services/qq.ts
+index 5ad5900..67417d3 100644
+--- a/apps/api/src/services/qq.ts
++++ b/apps/api/src/services/qq.ts
+@@ -186,15 +186,18 @@ export async function sendRobotMessage(body: RobotMessageBody): Promise<void> {
+     body.target.kind === 'group'
+       ? `/v2/groups/${body.target.openid}/messages`
+       : `/v2/users/${body.target.openid}/messages`;
+-  const payload: Record<string, unknown> = {
+-    content: body.content,
+-    msg_type: 0,
+-  };
++  // 平台要求：keyboard（消息按钮）只能挂在 markdown 消息（msg_type=2）上；
++  // 纯文本消息（msg_type=0）携带 keyboard 会被平台静默丢弃、只渲染文字。
++  // 带按钮时走 markdown（自定义 markdown 已对群聊/单聊全量开放，无需申请模板），
++  // 不带按钮时维持纯文本。markdown 文本内 @ 用户仍用 <qqbot-at-user id="..."/>（官方支持）。
++  const hasKeyboard = (body.keyboard?.length ?? 0) > 0;
++  const payload: Record<string, unknown> = hasKeyboard
++    ? { msg_type: 2, markdown: { content: body.content }, keyboard: buildKeyboard(body.keyboard!) }
++    : { content: body.content, msg_type: 0 };
+   if (body.msgId) {
+     payload.msg_id = body.msgId;
+     payload.msg_seq = nextMsgSeq(body.msgId);
+   }
+-  if (body.keyboard?.length) payload.keyboard = buildKeyboard(body.keyboard);
+ 
+   const res = await fetch(`${OPEN_API_BASE}${path}`, {
+     method: 'POST',
