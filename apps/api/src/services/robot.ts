@@ -24,7 +24,6 @@ import { listDepartments } from './rule.js';
 import { createTicket, listPublished, lookupTicketForOpenid } from './ticket.js';
 import {
   ackInteraction,
-  applyEntryLink,
   applyLink,
   downloadRobotAttachment,
   publishedLink,
@@ -557,19 +556,13 @@ export const PANEL_LINK_ITEM = { name: '去网站申请', desc: '在网页端填
  */
 export const REPLY_PANEL: RobotKeyboardRow[] = [
   [
-    { id: 'apply', label: '申请工单', type: 1, data: '申请工单' },
-    { id: 'query', label: '进度查询', type: 1, data: '查询' },
-    { id: 'published', label: '结果公示', type: 1, data: '公示' },
-  ],
-  [
-    { id: 'rules', label: '审核规则', type: 1, data: '规则' },
     { id: 'code', label: '拿接洽码', type: 1, data: '拿接洽码' },
-    { id: 'intro', label: '部门介绍', type: 1, data: '部门介绍' },
+    { id: 'apply', label: '申请工单', type: 1, data: '申请工单' },
+    { id: 'bind', label: '绑定审核员', type: 1, data: '绑定' },
   ],
   [
-    { id: 'bind', label: '审核员绑定', type: 1, data: '绑定' },
-    { id: 'help', label: '帮助', type: 1, data: '帮助' },
-    { id: 'site', label: '去网站申请', type: 0, data: applyEntryLink() },
+    { id: 'query', label: '查询进度', type: 1, data: '查询' },
+    { id: 'published', label: '公示', type: 1, data: '公示' },
   ],
 ];
 
