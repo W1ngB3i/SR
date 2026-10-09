@@ -114,6 +114,13 @@ export function SubmitPage() {
     }));
   }, [selectedDept]);
 
+  /** 部门无模式占位（如 Party / Team / Group）：明确提示而非空白下拉 */
+  const modePlaceholder = !selectedDept
+    ? '请先选择审核部门'
+    : selectedDept.modes.length === 0
+      ? '该部门暂未开放模式，请联系总管'
+      : '选择该部门的审核模式';
+
   if (loadError) {
     return (
       <div className="page-hero">
@@ -290,9 +297,14 @@ export function SubmitPage() {
               rules={[{ required: true, message: '请选择审核模式' }]}
             >
               <Select
-                placeholder={selectedDept ? '选择该部门的审核模式' : '请先选择审核部门'}
+                placeholder={modePlaceholder}
                 disabled={!selectedDept}
                 options={modeOptions}
+                notFoundContent={
+                  selectedDept && selectedDept.modes.length === 0
+                    ? '该部门暂未开放模式，请联系总管'
+                    : undefined
+                }
               />
             </Form.Item>
           </div>

@@ -16,7 +16,7 @@ import {
 import { getDb } from '../db/index.js';
 import { newId, nowIso } from '../lib/ids.js';
 import { ApiError } from '../lib/errors.js';
-import { isRobotConfigured } from '../env.js';
+import { RULES_IMAGE_URL, isRobotConfigured } from '../env.js';
 import { writeAudit, type AuditActor } from './audit.js';
 import { getConfig } from './config.js';
 import { getStaffUserById } from './user.js';
@@ -521,8 +521,8 @@ const HELP_TEXT = [
   '可用指令（群聊请先 @我，私聊直接发送）：',
   '· 申请工单 —— 聊天式填单，在 QQ 内完成申请',
   '· 查询 <查询码> —— 查看工单进度与结果',
-  '· 公示 [部门] —— 查看最近结果公示（如：公示 联大）',
-  '· 规则 [部门] —— 查看部门难度与审核标准（如：规则 EC）',
+  '· 公示 [部门] —— 查看最近结果公示（如：公示 总部）',
+  '· 规则 [部门] —— 查看部门难度与审核标准（如：规则 总部）',
   '· 部门介绍 —— 五个部门历史与现状',
   '· 拿接洽码 —— 领取一次性接洽码',
   '· 绑定 <后台认证 ID> —— 审核员完成身份绑定',
@@ -586,7 +586,7 @@ export function replyPanelWith(
   return [...filters, ...replyKeyboard(action)].slice(0, MAX_KEYBOARD_ROWS);
 }
 
-/** 部门筛选按钮行：「公示 联大」/「规则 EC」等价于用户直接发送该指令 */
+/** 部门筛选按钮行：「公示 总部」/「规则 总部」等价于用户直接发送该指令 */
 function departmentFilterRow(prefix: string, departments: DepartmentDTO[]): RobotKeyboardRow {
   return departments.slice(0, 5).map((department, index) => ({
     id: `filter-${index}`,
@@ -863,6 +863,13 @@ async function handlePublished(
   });
 }
 
+/**
+ * 「规则」总览图的 markdown 展示尺寸：必须与 src/public/rules/rules-v2.png 的实际尺寸一致。
+ * 图片由 scripts/gen-rules-image.ts 依据 catalog.ts 数据生成，重制后同步更新此处的宽高。
+ */
+const RULES_IMAGE_WIDTH = 750;
+const RULES_IMAGE_HEIGHT = 1695;
+
 async function handleRules(
   ctx: InboundContext,
   content: string,
@@ -872,6 +879,17 @@ async function handleRules(
   const departments = listDepartments(false);
   const keyboard = replyPanelWith([departmentFilterRow('规则', departments)]);
   if (!arg) {
+    // 无参：回复一张总览图（部门难度 + 总部 28 模式），纯文本版走「规则 文字」兜底
+    return deliver(ctx, {
+      kind: RobotMessageKind.Rules,
+      content:
+        // alt 不带空格：平台按 `#宽px #高px` 解析展示尺寸，避免与 alt 内的分词冲突
+        `![SR公会审核部门与模式标准#${RULES_IMAGE_WIDTH}px #${RULES_IMAGE_HEIGHT}px](${RULES_IMAGE_URL})` +
+        '\n回复「规则 + 部门」查看单部门详情；图片打不开时可发送「规则 文字」查看纯文本版。',
+      keyboard,
+    });
+  }
+  if (arg === '文字') {
     return deliver(ctx, {
       kind: RobotMessageKind.Rules,
       content: formatRulesOverview(departments),
@@ -1184,7 +1202,7 @@ function maxEvidence(): number {
   return Math.max(1, getConfig('upload_limits').max_files);
 }
 
-/** 按编号或名称模糊匹配部门（如「联大」→「联大逐梦起源」） */
+/** 按编号或名称模糊匹配部门（如「总」→「总部」） */
 function findDepartment(query: string, departments: DepartmentDTO[]): DepartmentDTO | null {
   const keyword = query.trim().toLowerCase();
   if (!keyword) return null;

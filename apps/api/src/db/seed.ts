@@ -46,68 +46,79 @@ interface DemoTicket {
 
 const DEMO_TICKETS: DemoTicket[] = [
   {
-    id: 'tkt-shanyu', circle_name: '山栀', department_id: 'dept-ec-intl',
-    module: 'PE', mode_id: 'mode-ec-dandao', self_proof: 1, contact: 'AB2CDE',
+    id: 'tkt-shanyu', circle_name: '山栀', department_id: 'dept-hq',
+    module: 'PE', mode_id: 'mode-hq-01', self_proof: 1, contact: 'AB2CDE',
     status: 'published', assignee_id: 'usr-liuyun', is_priority: 0,
     createdAtHoursAgo: 96, claimedHoursAgo: 90, resultedHoursAgo: 80, publishedHoursAgo: 72,
-    receipt: { pe_grade: 'S', pass: 1, target_department: 'EC', comment: '操作流畅，反应迅速，单刀连段稳定。' },
+    receipt: { pe_grade: 'S', pass: 1, target_department: '总部', comment: '操作流畅，反应迅速，单刀连段稳定。' },
   },
   {
-    id: 'tkt-ache', circle_name: '阿澈', department_id: 'dept-javalow',
-    module: 'BOTH', mode_id: 'mode-javalow-nodebuff', self_proof: 1, contact: 'CD3FGH',
+    id: 'tkt-ache', circle_name: '阿澈', department_id: 'dept-hq',
+    module: 'BOTH', mode_id: 'mode-hq-15', self_proof: 1, contact: 'CD3FGH',
     status: 'published', assignee_id: 'usr-xingchen', is_priority: 0,
     createdAtHoursAgo: 120, claimedHoursAgo: 116, resultedHoursAgo: 100, publishedHoursAgo: 90,
-    receipt: { pe_grade: 'A', pc_grade: 'B', pass: 1, target_department: 'Java低版本', comment: '双端发挥均衡，Java 低版本 NoDebuff 意识到位。' },
+    receipt: { pe_grade: 'A', pc_grade: 'B', pass: 1, target_department: '总部', comment: '双端发挥均衡，Java 低版本 Nodebuff 意识到位。' },
   },
   {
-    id: 'tkt-nanyu', circle_name: '南屿', department_id: 'dept-javahigh',
-    module: 'PC', mode_id: 'mode-javahi-crystals', self_proof: 0, contact: 'EF4JKM',
+    id: 'tkt-nanyu', circle_name: '南屿', department_id: 'dept-hq',
+    module: 'PC', mode_id: 'mode-hq-20', self_proof: 0, contact: 'EF4JKM',
     status: 'published', assignee_id: 'usr-beian', is_priority: 0,
     createdAtHoursAgo: 144, claimedHoursAgo: 140, resultedHoursAgo: 130, publishedHoursAgo: 120,
     receipt: { pc_grade: 'C', pass: 0, comment: '晶体操作未达 ht4 最低要求，评价不通过，可择日重考。' },
   },
   {
-    id: 'tkt-wudao', circle_name: '雾岛晚风', department_id: 'dept-lobby',
-    module: 'PC', mode_id: 'mode-lianda-ffa', self_proof: 0, contact: 'GH5NPQ',
+    id: 'tkt-wudao', circle_name: '雾岛晚风', department_id: 'dept-hq',
+    module: 'PC', mode_id: 'mode-hq-27', self_proof: 0, contact: 'GH5NPQ',
     status: 'resulted', assignee_id: 'usr-liuyun', is_priority: 0,
     createdAtHoursAgo: 30, claimedHoursAgo: 26, resultedHoursAgo: 2,
-    receipt: { pc_grade: 'B', pass: 1, target_department: '联大逐梦起源', comment: '混战意识良好，走位积极，符合大厅难度口径。', is_draft: 0 },
+    receipt: { pc_grade: 'B', pass: 1, target_department: '总部', comment: '混战意识良好，走位积极，符合总部难度口径。', is_draft: 0 },
   },
   {
-    id: 'tkt-yuejian', circle_name: '月见白', department_id: 'dept-javahigh',
-    module: 'PC', mode_id: 'mode-javahi-sword', self_proof: 1, contact: 'JK6RSV',
+    id: 'tkt-yuejian', circle_name: '月见白', department_id: 'dept-hq',
+    module: 'PC', mode_id: 'mode-hq-19', self_proof: 1, contact: 'JK6RSV',
     status: 'reviewing', assignee_id: 'usr-xingchen', is_priority: 0,
     createdAtHoursAgo: 20, claimedHoursAgo: 8,
   },
   {
-    id: 'tkt-baiya', circle_name: '白鸦', department_id: 'dept-beintl',
-    module: 'BOTH', mode_id: 'mode-beintl-pot', self_proof: 1, contact: 'KM7TVY',
+    id: 'tkt-baiya', circle_name: '白鸦', department_id: 'dept-hq',
+    module: 'BOTH', mode_id: 'mode-hq-06', self_proof: 1, contact: 'KM7TVY',
     status: 'reviewing', assignee_id: 'usr-liuyun', is_priority: 0,
     createdAtHoursAgo: 48, claimedHoursAgo: 40,
   },
   {
-    id: 'tkt-changfeng', circle_name: '长风', department_id: 'dept-jingdao',
-    module: 'PE', mode_id: 'mode-misaki-boxing', self_proof: 0, contact: 'NP8WXA',
+    id: 'tkt-changfeng', circle_name: '长风', department_id: 'dept-hq',
+    module: 'PE', mode_id: 'mode-hq-22', self_proof: 0, contact: 'NP8WXA',
     status: 'supplementing', assignee_id: 'usr-xingchen', is_priority: 0,
     supplement_reason: '自证材料无法播放，请补充清晰的操作视频（建议 30 秒以上）。',
     createdAtHoursAgo: 60, claimedHoursAgo: 55,
   },
   {
-    id: 'tkt-xingye', circle_name: '星野凛', department_id: 'dept-ec-intl',
-    module: 'PE', mode_id: 'mode-ec-combo', self_proof: 1, contact: 'PQ9YB2',
+    id: 'tkt-xingye', circle_name: '星野凛', department_id: 'dept-hq',
+    module: 'PE', mode_id: 'mode-hq-04', self_proof: 1, contact: 'PQ9YB2',
     status: 'pending_claim', assignee_id: null, is_priority: 0, createdAtHoursAgo: 3,
   },
   {
-    id: 'tkt-luochen', circle_name: '落尘', department_id: 'dept-lobby',
-    module: 'PC', mode_id: 'mode-lianda-ffa', self_proof: 0, contact: 'RS3CDE',
+    id: 'tkt-luochen', circle_name: '落尘', department_id: 'dept-hq',
+    module: 'PC', mode_id: 'mode-hq-27', self_proof: 0, contact: 'RS3CDE',
     status: 'pending_claim', assignee_id: null, is_priority: 1, createdAtHoursAgo: 8,
   },
   {
-    id: 'tkt-banxia', circle_name: '半夏', department_id: 'dept-ec-intl',
-    module: 'PC', mode_id: 'mode-ec-wall', self_proof: 0, contact: 'TV4FGH',
+    id: 'tkt-banxia', circle_name: '半夏', department_id: 'dept-hq',
+    module: 'PC', mode_id: 'mode-hq-03', self_proof: 0, contact: 'TV4FGH',
     status: 'pending_claim', assignee_id: null, is_priority: 0, createdAtHoursAgo: 13,
   },
 ];
+
+/**
+ * 难度标准公告（单一来源）：seed 首次安装写入，sync-catalog 升级旧库时同步为新口径。
+ * 内容与 catalog.ts 的部门 / 模式口径保持一致，改版时同批更新。
+ */
+export const DIFFICULTY_ANNOUNCEMENT_TITLE = '关于审核难度标准（2023.12 起生效）';
+export const DIFFICULTY_ANNOUNCEMENT_CONTENT =
+  `设备界定：${DEVICE_NOTES[0]}。${DEVICE_NOTES[1]}。` +
+  '部门难度：总部 B+ Tier，承接 EC / 布吉岛 / Java 低版本 / Java 高版本 / BE 国际服 / Misaki / 联大逐梦起源 / 其他模块的全部审核模式（要求 B+ Tier 及政审）；' +
+  'SR_Party 国际部门 C+ Tier；SR_Team 布吉岛 & Java 部门政审（联系 1104546892），精刀小组 B- Tier；SR_Group 联机大厅部门 C+ Tier。' +
+  'JAVA 高版本 Crystals 审核最低要求 ht4。';
 
 function insertEvent(db: ReturnType<typeof getDb>, ticketId: string, type: string, actorName: string, detail: string, at: string): void {
   db.prepare(
@@ -217,8 +228,8 @@ export function seedBase(force = false): void {
     );
     annInsert.run(
       newId('ann'),
-      '关于审核难度标准（2023.12 起生效）',
-      `设备界定：${DEVICE_NOTES[0]}。${DEVICE_NOTES[1]}。部门难度：总部 B+ Tier（单公会）；SR_Team 布吉岛&JAVA 部门政审（联系 1104546892）；SR_Team 精刀小组 B- Tier；SR_Party EC&国际部门 C+ Tier；SR_Group 联机大厅部门 C+ Tier；SR_Arrow 生存部门 B-；SR_Explore 开拓部门政审（联系 323992228）。JAVA 高版本 Crystals 审核最低要求 ht4。`,
+      DIFFICULTY_ANNOUNCEMENT_TITLE,
+      DIFFICULTY_ANNOUNCEMENT_CONTENT,
       1,
       '望北',
       hoursAgo(24 * 14),

@@ -25,8 +25,8 @@ function createPending(name: string) {
   return ticket.createTicket(
     {
       circle_name: name,
-      department_id: 'dept-ec-intl',
-      mode_id: 'mode-ec-dandao',
+      department_id: 'dept-hq',
+      mode_id: 'mode-hq-01',
       module: 'PE',
       self_proof: false,
       contact: insertContactKey(dbMod.getDb(), `CLM${String(keySeq).padStart(3, '0')}`),

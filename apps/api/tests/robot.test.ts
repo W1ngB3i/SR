@@ -51,15 +51,15 @@ const withPage = (filters: { keyword?: string; role?: string; dept_id?: string }
 
 describe('QQ 机器人：身份绑定', () => {
   it('审核员发送后台认证 ID 后完成绑定并带出部门', async () => {
-    userSvc.updateUser('usr-xingchen', { department_id: 'dept-ec-intl' }, wangbei);
+    userSvc.updateUser('usr-xingchen', { department_id: 'dept-hq' }, wangbei);
     const reply = await robot.handleInboundMessage(groupCtx('openid-reviewer-1', 'usr-xingchen'));
     expect(reply.content).toContain('已绑定');
     expect(reply.content).toContain('星辰');
 
     const identity = withPage().find((i) => i.openid === 'openid-reviewer-1');
     expect(identity?.role).toBe('reviewer');
-    expect(identity?.dept_id).toBe('dept-ec-intl');
-    expect(identity?.dept_name).toBe('EC');
+    expect(identity?.dept_id).toBe('dept-hq');
+    expect(identity?.dept_name).toBe('总部');
     expect(identity?.user_id).toBe('usr-xingchen');
     expect(identity?.source).toBe('bot');
   });
@@ -82,7 +82,7 @@ describe('QQ 机器人：身份绑定', () => {
     await robot.handleInboundMessage(groupCtx('openid-reviewer-1', 'usr-xingchen', 'msg-rebind'));
     const identity = withPage().find((i) => i.openid === 'openid-reviewer-1');
     expect(identity?.qq_number).toBe('123456789');
-    expect(identity?.dept_id).toBe('dept-ec-intl');
+    expect(identity?.dept_id).toBe('dept-hq');
   });
 
   it('发送「绑定」只提示认证 ID，不建立绑定', async () => {
@@ -132,8 +132,8 @@ describe('QQ 机器人：提单强制绑定接洽码', () => {
     const created = ticket.createTicket(
       {
         circle_name: '手工码放行',
-        department_id: 'dept-ec-intl',
-        mode_id: 'mode-ec-dandao',
+        department_id: 'dept-hq',
+        mode_id: 'mode-hq-01',
         module: 'PE',
         self_proof: false,
         contact: code,
@@ -151,8 +151,8 @@ describe('QQ 机器人：提单强制绑定接洽码', () => {
         ticket.createTicket(
           {
             circle_name: '手工码拦截',
-            department_id: 'dept-ec-intl',
-            mode_id: 'mode-ec-dandao',
+            department_id: 'dept-hq',
+            mode_id: 'mode-hq-01',
             module: 'PE',
             self_proof: false,
             contact: manual,
@@ -164,8 +164,8 @@ describe('QQ 机器人：提单强制绑定接洽码', () => {
       const created = ticket.createTicket(
         {
           circle_name: '机器人码放行',
-          department_id: 'dept-ec-intl',
-          mode_id: 'mode-ec-dandao',
+          department_id: 'dept-hq',
+          mode_id: 'mode-hq-01',
           module: 'PE',
           self_proof: false,
           contact: boundCodeOf('openid-player-1'),
@@ -196,11 +196,11 @@ describe('QQ 机器人：提单强制绑定接洽码', () => {
 describe('QQ 机器人：后台管理', () => {
   it('手工新增 / 更新 / 删除绑定，QQ 号可清空', () => {
     const created = robot.createIdentity(
-      { openid: 'openid-manual-1', qq_number: '123456789', role: 'reviewer', dept_id: 'dept-lobby', guild_id: 'guild-2' },
+      { openid: 'openid-manual-1', qq_number: '123456789', role: 'reviewer', dept_id: 'dept-hq', guild_id: 'guild-2' },
       wangbei,
     );
     expect(created.source).toBe('manual');
-    expect(created.dept_name).toBe('联大逐梦起源');
+    expect(created.dept_name).toBe('总部');
 
     const updated = robot.updateIdentity('openid-manual-1', { role: 'chief' }, wangbei);
     expect(updated.role).toBe('chief');
@@ -371,11 +371,18 @@ describe('QQ 机器人：只读指令', () => {
     expect(reply.content).toContain('SR_Explore');
   });
 
-  it('规则总览包含设备界定与部门清单', async () => {
+  it('规则总览回复总览图（markdown 嵌图 + 部门筛选按钮）', async () => {
     const reply = await robot.handleInboundMessage(groupCtx('openid-rules-1', '规则'));
     expect(reply.kind).toBe('rules');
+    expect(reply.content).toContain('/api/public/rules/rules-v2.png');
+    expect(reply.content).toMatch(/!\[SR公会审核部门与模式标准#750px #\d+px\]\(/);
+  });
+
+  it('「规则 文字」保留纯文本总览作为兜底', async () => {
+    const reply = await robot.handleInboundMessage(groupCtx('openid-rules-text', '规则 文字'));
+    expect(reply.kind).toBe('rules');
     expect(reply.content).toContain('设备界定');
-    expect(reply.content).toContain('EC');
+    expect(reply.content).toContain('总部');
   });
 
   it('未配置凭据时结果公示也照常返回内容', async () => {
@@ -423,7 +430,7 @@ describe('QQ 机器人：聊天式申请', () => {
     expect((await robot.handleInboundMessage(groupCtx(openid, '申请工单', 'a1'))).content).toContain('圈名');
     expect((await robot.handleInboundMessage(groupCtx(openid, '机器人测试圈', 'a2'))).content).toContain('接洽码');
     expect((await robot.handleInboundMessage(groupCtx(openid, code, 'a3'))).content).toContain('部门');
-    expect((await robot.handleInboundMessage(groupCtx(openid, 'EC', 'a4'))).content).toContain('模式');
+    expect((await robot.handleInboundMessage(groupCtx(openid, '总部', 'a4'))).content).toContain('模式');
     expect((await robot.handleInboundMessage(groupCtx(openid, '1', 'a5'))).content).toContain('模块');
     expect((await robot.handleInboundMessage(groupCtx(openid, '1', 'a6'))).content).toContain('自证');
     expect((await robot.handleInboundMessage(groupCtx(openid, '无', 'a7'))).content).toContain('证据');
@@ -471,7 +478,7 @@ describe('QQ 机器人：聊天式申请', () => {
     await robot.handleInboundMessage(groupCtx(openid, '申请工单', 'd1'));
     await robot.handleInboundMessage(groupCtx(openid, '附件测试圈', 'd2'));
     await robot.handleInboundMessage(groupCtx(openid, code, 'd3'));
-    await robot.handleInboundMessage(groupCtx(openid, 'EC', 'd4'));
+    await robot.handleInboundMessage(groupCtx(openid, '总部', 'd4'));
     await robot.handleInboundMessage(groupCtx(openid, '1', 'd5'));
     await robot.handleInboundMessage(groupCtx(openid, '1', 'd6'));
     await robot.handleInboundMessage(groupCtx(openid, '无', 'd7'));

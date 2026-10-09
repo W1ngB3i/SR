@@ -19,8 +19,8 @@ const chiefWangbei = { id: 'usr-wangbei', name: '望北' };
 
 const baseInput = {
   circle_name: '测试玩家',
-  department_id: 'dept-ec-intl',
-  mode_id: 'mode-ec-dandao',
+  department_id: 'dept-hq',
+  mode_id: 'mode-hq-01',
   module: 'PE' as const,
   self_proof: false,
 };
@@ -139,8 +139,8 @@ describe('数据库回滚', () => {
   it('受约束的模式删除被拒绝并保留数据', () => {
     const db = dbMod.getDb();
     const before = (db.prepare('SELECT COUNT(*) AS c FROM mode').get() as { c: number }).c;
-    // mode-javahi-crystals 被演示工单引用，直接 SQL 删除应触发外键约束
-    expect(() => db.prepare(`DELETE FROM mode WHERE id = 'mode-javahi-crystals'`).run()).toThrowError();
+    // mode-hq-20 被演示工单引用，直接 SQL 删除应触发外键约束
+    expect(() => db.prepare(`DELETE FROM mode WHERE id = 'mode-hq-20'`).run()).toThrowError();
     const after = (db.prepare('SELECT COUNT(*) AS c FROM mode').get() as { c: number }).c;
     expect(after).toBe(before);
   });

@@ -7,10 +7,11 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc -p tsconfig.json && node -e \"require('fs').copyFileSync('src/db/schema.sql','dist/db/schema.sql')\"",
+    "build": "tsc -p tsconfig.json && node -e \"const fs=require('fs');fs.copyFileSync('src/db/schema.sql','dist/db/schema.sql');fs.cpSync('src/public','dist/public',{recursive:true})\"",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
+    "rules:image": "tsx scripts/gen-rules-image.ts",
     "db:reset": "tsx src/db/cli.ts reset",
     "db:seed": "tsx src/db/cli.ts seed --force",
     "db:sync-catalog": "tsx src/db/cli.ts sync-catalog"
@@ -30,6 +31,7 @@
     "@types/express": "^4.17.25",
     "@types/multer": "^2.2.0",
     "@types/node": "^20.17.0",
+    "sharp": "^0.35.4",
     "tsx": "^4.23.13",
     "typescript": "^5.6.3",
     "vitest": "^5.0.1"

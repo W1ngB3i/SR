@@ -1,5 +1,7 @@
 import express from 'express';
+import path from 'node:path';
 import cors from 'cors';
+import { PUBLIC_DIR } from './env.js';
 import { requestContext } from './middleware/context.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { apiRouter } from './routes/index.js';
@@ -27,6 +29,13 @@ export function createApp() {
   app.get('/healthz', (_req, res) => {
     res.json({ ok: true, uptime: Math.round(process.uptime()), timestamp: new Date().toISOString() });
   });
+
+  // 公开静态资源（机器人「规则」总览图）：放在 /api 前缀下，复用各站点的 /api 反向代理；
+  // 文件名带版本号，长缓存即可（内容变更时换文件名，见 RULES_IMAGE_URL）
+  app.use(
+    '/api/public/rules',
+    express.static(path.join(PUBLIC_DIR, 'rules'), { maxAge: '30d', immutable: true }),
+  );
 
   app.use(apiRouter);
 

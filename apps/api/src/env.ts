@@ -61,6 +61,20 @@ export const PUBLIC_SITE_URL = (process.env.PUBLIC_SITE_URL ?? 'http://localhost
 export const ADMIN_SITE_URL = (process.env.ADMIN_SITE_URL ?? 'http://localhost:5174').replace(/\/+$/, '');
 
 /**
+ * 公开静态资源目录（源码 src/public，构建时随 dist 一并产出，与 schema.sql 同款拷贝策略）。
+ * 现用于托管机器人「规则」总览图，经 /api/public/rules 对外提供。
+ */
+export const PUBLIC_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public');
+
+/**
+ * 机器人「规则」总览图 URL。默认经申请人端站点的 /api 反向代理读取 API 静态资源，
+ * QQ 平台会按此 URL 下载并转存图片；改用对象存储时用 RULES_IMAGE_URL 覆盖。
+ * 图片内容变更时换文件名（rules-vN.png）以避免平台侧缓存。
+ */
+export const RULES_IMAGE_URL =
+  process.env.RULES_IMAGE_URL ?? `${PUBLIC_SITE_URL}/api/public/rules/rules-v2.png`;
+
+/**
  * 机器人是否具备真实投递能力。
  * v2 开放接口只需 AppID + Secret（Token 鉴权已由平台弃用），二者齐备即可投递，否则只记日志待重发。
  */

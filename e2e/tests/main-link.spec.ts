@@ -70,8 +70,8 @@ test('主链路：生成接洽码 → 提交 → 接单 → 回执 → 公示 �
 
   await page.getByPlaceholder('游戏内使用的圈名').fill(CIRCLE);
   await page.getByPlaceholder('如 AB2CDE').fill(contactKey);
-  await pickOption(page, '审核部门', '其他模块');
-  await pickOption(page, '审核模式', '建筑');
+  await pickOption(page, '审核部门', '总部');
+  await pickOption(page, '审核模式', 'EC单刀');
   await page.getByText('PC PVP（键鼠）', { exact: true }).click();
   await page.getByText('非自证（常规录像）', { exact: true }).click();
 
