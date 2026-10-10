@@ -118,7 +118,7 @@ export function SubmitPage() {
   const modePlaceholder = !selectedDept
     ? '请先选择审核部门'
     : selectedDept.modes.length === 0
-      ? '该部门暂未开放模式，请联系总管'
+      ? '该部门暂未开放任何审核模式'
       : '选择该部门的审核模式';
 
   if (loadError) {
@@ -302,7 +302,7 @@ export function SubmitPage() {
                 options={modeOptions}
                 notFoundContent={
                   selectedDept && selectedDept.modes.length === 0
-                    ? '该部门暂未开放模式，请联系总管'
+                    ? '该部门暂未开放任何审核模式'
                     : undefined
                 }
               />

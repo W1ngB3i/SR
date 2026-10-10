@@ -973,7 +973,7 @@ async function handleApplyStep(
         return reply(`没有找到该部门，请回复编号或部门名称：\n${formatDepartmentList(departments)}`);
       }
       if (department.modes.length === 0) {
-        return reply(`「${department.name}」暂未配置审核模式，请回复「取消」后换个部门，或联系审核总管。`);
+        return reply(`「${department.name}」暂未开放任何审核模式，请回复「取消」后换个部门，或联系审核总管。`);
       }
       draft.department_id = department.id;
       draft.department_name = department.name;
@@ -1277,7 +1277,7 @@ function formatRulesOverview(departments: DepartmentDTO[]): string {
     '部门与模式（回复「规则 + 部门名」看详情）：',
   ];
   for (const department of departments) {
-    const modes = department.modes.map((mode) => mode.name).join(' / ') || '待补充';
+    const modes = department.modes.map((mode) => mode.name).join(' / ') || '该部门暂未开放任何审核模式';
     lines.push(`  · ${department.name}${department.tier ? `（${department.tier}）` : ''}：${modes}`);
   }
   return lines.join('\n');
@@ -1288,7 +1288,7 @@ function formatRulesForDepartment(department: DepartmentDTO): string {
   if (department.description) lines.push(department.description);
   if (department.contact) lines.push(`联系方式：${department.contact}`);
   lines.push('审核模式：');
-  if (department.modes.length === 0) lines.push('  · 暂未配置');
+  if (department.modes.length === 0) lines.push('  · 该部门暂未开放任何审核模式');
   for (const mode of department.modes) {
     lines.push(
       `  · ${mode.group_name ? `${mode.group_name} ` : ''}${mode.name}${mode.min_requirement ? `（${mode.min_requirement}）` : ''}`,
