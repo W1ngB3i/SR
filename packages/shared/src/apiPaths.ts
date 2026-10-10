@@ -46,6 +46,9 @@ export const API = {
   admin: {
     departments: `${API_PREFIX}/admin/departments`,
     department: (id: string) => `${API_PREFIX}/admin/departments/${id}`,
+    /** 部门模式开放配置：总览（部门 + 模式全集 + 开放关系）与按部门全量覆盖保存 */
+    departmentModeOverview: `${API_PREFIX}/admin/department-modes/overview`,
+    departmentModes: (id: string) => `${API_PREFIX}/admin/departments/${id}/modes`,
     modes: `${API_PREFIX}/admin/modes`,
     mode: (id: string) => `${API_PREFIX}/admin/modes/${id}`,
     config: `${API_PREFIX}/admin/config`,

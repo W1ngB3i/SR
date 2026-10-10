@@ -33,6 +33,18 @@ CREATE TABLE IF NOT EXISTS mode (
 );
 CREATE INDEX IF NOT EXISTS idx_mode_dept ON mode(department_id);
 
+-- 部门模式开放关系（多对多）：mode 为全局模式全集，department_id 仅作「默认归属」；
+-- 真正决定「部门下有哪些模式」的是本表，后台可随时按部门勾选调整。
+CREATE TABLE IF NOT EXISTS department_mode (
+  department_id TEXT NOT NULL REFERENCES department(id) ON DELETE CASCADE,
+  mode_id       TEXT NOT NULL REFERENCES mode(id) ON DELETE CASCADE,
+  sort          INTEGER NOT NULL DEFAULT 0,
+  created_by    TEXT NOT NULL DEFAULT '',
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (department_id, mode_id)
+);
+CREATE INDEX IF NOT EXISTS idx_dm_mode ON department_mode(mode_id);
+
 CREATE TABLE IF NOT EXISTS ticket (
   id               TEXT PRIMARY KEY,
   query_code       TEXT NOT NULL UNIQUE,

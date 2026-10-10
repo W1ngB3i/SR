@@ -1,4 +1,5 @@
 import {
+  CATALOG_DEPARTMENT_MODES,
   CATALOG_DEPARTMENTS,
   CATALOG_MODES,
   DEPRECATED_DEPT_IDS,
@@ -42,6 +43,18 @@ export function syncCatalog(): void {
       modeUpsert.run(m.id, m.department_id, m.name, m.min_requirement, m.sort);
     }
 
+    // 开放关系只补初始缺省（总部 28 条），已存在的记录不动：
+    // 后台调整过开放范围后重跑本命令不会覆盖人工配置。
+    const deptModeInsert = db.prepare(
+      `INSERT OR IGNORE INTO department_mode (department_id, mode_id, sort, created_by, created_at)
+       VALUES (?, ?, ?, 'catalog.sync', ?)`,
+    );
+    let relations = 0;
+    const syncAt = new Date().toISOString();
+    for (const dm of CATALOG_DEPARTMENT_MODES) {
+      relations += deptModeInsert.run(dm.department_id, dm.mode_id, dm.sort, syncAt).changes;
+    }
+
     const placeholders = DEPRECATED_DEPT_IDS.map(() => '?').join(',');
     const ticketsByDept = db
       .prepare(`UPDATE ticket SET department_id = 'dept-hq' WHERE department_id IN (${placeholders})`)
@@ -74,6 +87,7 @@ export function syncCatalog(): void {
       after: JSON.stringify({
         departments: CATALOG_DEPARTMENTS.length,
         modes: CATALOG_MODES.length,
+        department_modes_added: relations,
         migrated: {
           tickets_by_department: ticketsByDept,
           tickets_by_mode: ticketsByMode,
@@ -85,11 +99,12 @@ export function syncCatalog(): void {
       detail: '同步审核部门与模式目录，并将历史工单 / 账号 / 机器人绑定迁移至总部',
     });
 
-    return { ticketsByDept, ticketsByMode, users, identities, announcement };
+    return { ticketsByDept, ticketsByMode, users, identities, announcement, relations };
   })();
 
   console.log(
     `[sync-catalog] 完成：${CATALOG_DEPARTMENTS.length} 个部门、${CATALOG_MODES.length} 个模式；` +
+      `补齐部门开放关系 ${migrated.relations} 条；` +
       `迁移历史引用 工单 ${migrated.ticketsByDept + migrated.ticketsByMode} 处（部门 ${migrated.ticketsByDept} / 模式 ${migrated.ticketsByMode}）、` +
       `账号 ${migrated.users} 个、机器人绑定 ${migrated.identities} 条；` +
       `停用旧部门 ${DEPRECATED_DEPT_IDS.length} 个${migrated.announcement > 0 ? '；难度公告已更新为新口径' : ''}。`,

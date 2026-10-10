@@ -95,12 +95,18 @@ export const departmentSchema = z.object({
   enabled: z.boolean().default(true),
 });
 
+/** 模式属于全局模式全集；department_id 仅作默认归属，未填时服务端落到总部 */
 export const modeSchema = z.object({
-  department_id: z.string().min(1),
+  department_id: z.string().min(1).optional(),
   group_name: z.string().trim().max(40).default(''),
   name: z.string().trim().min(1, '请填写模式名称').max(50),
   min_requirement: z.string().trim().max(100).default(''),
   sort: z.number().int().min(0).max(999).default(0),
+});
+
+/** 部门模式开放配置：全量覆盖保存（department_id 走路径参数，body 只带 mode_ids） */
+export const departmentModesSchema = z.object({
+  mode_ids: z.array(z.string().min(1)).max(500),
 });
 
 export const announcementSchema = z.object({

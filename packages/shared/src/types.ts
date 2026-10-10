@@ -48,7 +48,32 @@ export interface DepartmentDTO {
   description: string;
   sort: number;
   enabled: boolean;
+  /** 该部门当前开放的模式（走 department_mode 开放关系，非模式默认归属） */
   modes: ModeDTO[];
+}
+
+/** 部门模式开放配置页的部门摘要 */
+export interface DepartmentModeDeptDTO {
+  id: string;
+  name: string;
+  tier: string;
+  sort: number;
+  enabled: boolean;
+}
+
+/** 部门模式开放配置总览：部门 + 模式全集 + 各部门当前开放的 mode_id */
+export interface DepartmentModeOverviewDTO {
+  departments: DepartmentModeDeptDTO[];
+  /** 模式全集（全局模式库） */
+  modes: ModeDTO[];
+  /** department_id → 已开放 mode_id 列表（按开放顺序） */
+  open_mode_ids: Record<string, string[]>;
+}
+
+/** 全量覆盖保存部门的开放关系后的结果 */
+export interface DepartmentModeSaveResultDTO {
+  department_id: string;
+  mode_ids: string[];
 }
 
 export interface TicketEventDTO {

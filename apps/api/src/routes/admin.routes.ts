@@ -2,6 +2,7 @@ import { Router, type Request } from 'express';
 import {
   announcementSchema,
   appealHandleSchema,
+  departmentModesSchema,
   departmentSchema,
   modeSchema,
   robotIdentityCreateSchema,
@@ -11,7 +12,13 @@ import {
   passwordResetSchema,
   zodFieldErrors,
 } from '@sr/shared';
-import { authRequired, requireRoles, MANAGER_ROLES, PLATFORM_ROLES } from '../middleware/auth.js';
+import {
+  authRequired,
+  requireRoles,
+  DEPT_MODE_ROLES,
+  MANAGER_ROLES,
+  PLATFORM_ROLES,
+} from '../middleware/auth.js';
 import { sendOk } from '../middleware/errorHandler.js';
 import { ApiError } from '../lib/errors.js';
 import { handleAppeal, listAppeals } from '../services/appeal.js';
@@ -40,7 +47,9 @@ import {
   createMode,
   deleteDepartment,
   deleteMode,
+  getDepartmentModesOverview,
   listDepartments,
+  setDepartmentModes,
   updateDepartment,
   updateMode,
 } from '../services/rule.js';
@@ -114,7 +123,28 @@ adminRouter.delete('/departments/:id', requireRoles(...MANAGER_ROLES), (req, res
   }
 });
 
-adminRouter.post('/modes', requireRoles(...MANAGER_ROLES), (req, res, next) => {
+// 部门模式开放配置：部门下拉 + 模式多选，保存后申请页与机器人规则自动跟随
+adminRouter.get('/department-modes/overview', requireRoles(...DEPT_MODE_ROLES), (_req, res, next) => {
+  try {
+    sendOk(res, getDepartmentModesOverview());
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminRouter.put('/departments/:id/modes', requireRoles(...DEPT_MODE_ROLES), (req, res, next) => {
+  try {
+    const parsed = departmentModesSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw ApiError.badRequest('FIELD_REQUIRED', '模式列表校验失败', zodFieldErrors(parsed.error));
+    }
+    sendOk(res, setDepartmentModes(idParam(req), parsed.data.mode_ids, actor(req)));
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminRouter.post('/modes', requireRoles(...DEPT_MODE_ROLES), (req, res, next) => {
   try {
     const parsed = modeSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -126,7 +156,7 @@ adminRouter.post('/modes', requireRoles(...MANAGER_ROLES), (req, res, next) => {
   }
 });
 
-adminRouter.put('/modes/:id', requireRoles(...MANAGER_ROLES), (req, res, next) => {
+adminRouter.put('/modes/:id', requireRoles(...DEPT_MODE_ROLES), (req, res, next) => {
   try {
     sendOk(res, updateMode(idParam(req), req.body ?? {}, actor(req)));
   } catch (err) {
@@ -134,7 +164,7 @@ adminRouter.put('/modes/:id', requireRoles(...MANAGER_ROLES), (req, res, next) =
   }
 });
 
-adminRouter.delete('/modes/:id', requireRoles(...MANAGER_ROLES), (req, res, next) => {
+adminRouter.delete('/modes/:id', requireRoles(...DEPT_MODE_ROLES), (req, res, next) => {
   try {
     deleteMode(idParam(req), actor(req));
     sendOk(res, { ok: true });

@@ -67,6 +67,8 @@ export function requireRoles(...allowed: StaffRole[]) {
 export const REVIEW_ROLES: StaffRole[] = ['reviewer', 'deputy', 'chief'];
 /** 管理人员（复核、公示、规则、指派） */
 export const MANAGER_ROLES: StaffRole[] = ['deputy', 'chief'];
+/** 部门模式开放配置（查看 / 保存 / 模式全集维护）：主管、副总管、管理员 */
+export const DEPT_MODE_ROLES: StaffRole[] = ['chief', 'deputy', 'admin'];
 /** 平台管理（账号、配置、日志） */
 export const PLATFORM_ROLES: StaffRole[] = ['deputy', 'chief', 'admin'];
 

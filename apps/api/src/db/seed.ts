@@ -1,6 +1,6 @@
 import { DEFAULT_FEEDBACK_CONTACTS, DEVICE_NOTES } from '@sr/shared';
 import { getDb } from './index.js';
-import { CATALOG_DEPARTMENTS, CATALOG_MODES } from './catalog.js';
+import { CATALOG_DEPARTMENT_MODES, CATALOG_DEPARTMENTS, CATALOG_MODES } from './catalog.js';
 import { newId, nowIso } from '../lib/ids.js';
 import { hashPassword } from '../lib/password.js';
 import { IS_PRODUCTION } from '../env.js';
@@ -133,6 +133,7 @@ function wipeAll(db: ReturnType<typeof getDb>): void {
   db.prepare('DELETE FROM receipt').run();
   db.prepare('DELETE FROM ticket_event').run();
   db.prepare('DELETE FROM ticket').run();
+  db.prepare('DELETE FROM department_mode').run();
   db.prepare('DELETE FROM mode').run();
   db.prepare('DELETE FROM department').run();
   db.prepare('DELETE FROM announcement').run();
@@ -190,6 +191,14 @@ export function seedBase(force = false): void {
       modeInsert.run(m.id, m.department_id, m.name, m.min_requirement, m.sort);
     }
 
+    const deptModeInsert = db.prepare(
+      `INSERT INTO department_mode (department_id, mode_id, sort, created_by, created_at)
+       VALUES (?, ?, ?, '系统初始化', ?)`,
+    );
+    for (const dm of CATALOG_DEPARTMENT_MODES) {
+      deptModeInsert.run(dm.department_id, dm.mode_id, dm.sort, nowIso());
+    }
+
     const configInsert = db.prepare(
       `INSERT INTO config (key, value, version, updated_by, updated_at) VALUES (?, ?, 1, '系统初始化', ?)`,
     );
@@ -244,7 +253,10 @@ export function seedBase(force = false): void {
     );
   })();
 
-  console.log(`[seed] 基础数据完成：${USERS.length} 个账号、${CATALOG_DEPARTMENTS.length} 个部门、${CATALOG_MODES.length} 个模式`);
+  console.log(
+    `[seed] 基础数据完成：${USERS.length} 个账号、${CATALOG_DEPARTMENTS.length} 个部门、` +
+      `${CATALOG_MODES.length} 个模式、${CATALOG_DEPARTMENT_MODES.length} 条部门开放关系`,
+  );
   if (IS_PRODUCTION) {
     console.warn('[seed] 初始口令为默认值 sr123456，请登录后立即修改');
   } else {

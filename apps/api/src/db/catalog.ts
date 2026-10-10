@@ -90,6 +90,22 @@ export const CATALOG_MODES: CatalogMode[] = [
   { id: 'mode-hq-28', department_id: 'dept-hq', name: '建筑/红石/指令', min_requirement: HQ_REQUIREMENT, sort: 28 },
 ];
 
+export interface CatalogDepartmentMode {
+  department_id: string;
+  mode_id: string;
+  sort: number;
+}
+
+/**
+ * 部门模式开放关系（初始配置）：总部开放全部 28 个模式，Party / Team / Group 暂不开放。
+ * 后续由管理后台「部门模式管理」按部门勾选调整，seed 只负责写入初次安装的默认值。
+ */
+export const CATALOG_DEPARTMENT_MODES: CatalogDepartmentMode[] = CATALOG_MODES.map((mode) => ({
+  department_id: 'dept-hq',
+  mode_id: mode.id,
+  sort: mode.sort,
+}));
+
 /** 上一版目录的部门：同步时停用，历史工单 / 账号 / 机器人绑定统一迁往总部 */
 export const DEPRECATED_DEPT_IDS = [
   'dept-ec-intl',
