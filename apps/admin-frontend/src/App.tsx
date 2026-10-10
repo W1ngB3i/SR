@@ -3,7 +3,7 @@ import type { ReactElement } from 'react';
 import { Backdrop } from '@sr/ui';
 import type { StaffRole } from '@sr/shared';
 import { useAuth } from './auth/AuthContext';
-import { canManage, canPlatform, canReview, homePathFor } from './roles';
+import { canManage, canManageDeptModes, canPlatform, canReview, homePathFor } from './roles';
 import { AdminLayout } from './layout/AdminLayout';
 import { LoginPage } from './pages/LoginPage';
 import { PoolPage } from './pages/PoolPage';
@@ -11,6 +11,7 @@ import { TicketDetailPage } from './pages/TicketDetailPage';
 import { ContactKeysPage } from './pages/ContactKeysPage';
 import { StatsPage } from './pages/StatsPage';
 import { RulesAdminPage } from './pages/RulesAdminPage';
+import { DepartmentModesPage } from './pages/DepartmentModesPage';
 import { UsersPage } from './pages/UsersPage';
 import { AnnouncementsPage } from './pages/AnnouncementsPage';
 import { AppealsPage } from './pages/AppealsPage';
@@ -104,6 +105,14 @@ export function App() {
             element={
               <RequireRole allow={canManage}>
                 <RulesAdminPage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/department-modes"
+            element={
+              <RequireRole allow={canManageDeptModes}>
+                <DepartmentModesPage />
               </RequireRole>
             }
           />

@@ -9,6 +9,9 @@ export const MANAGER_ROLES: readonly StaffRole[] = ['deputy', 'chief'];
 /** 平台级：人员 / 配置 / 审计 / 统计 */
 export const PLATFORM_ROLES: readonly StaffRole[] = ['deputy', 'chief', 'admin'];
 
+/** 部门模式开放配置（与后端 DEPT_MODE_ROLES 对齐）：主管 / 副总管 / 管理员 */
+export const DEPT_MODE_ROLES: readonly StaffRole[] = ['chief', 'deputy', 'admin'];
+
 export function hasRole(role: StaffRole | undefined, allowed: readonly StaffRole[]): boolean {
   return !!role && allowed.includes(role);
 }
@@ -16,6 +19,7 @@ export function hasRole(role: StaffRole | undefined, allowed: readonly StaffRole
 export const canReview = (role: StaffRole | undefined) => hasRole(role, REVIEW_ROLES);
 export const canManage = (role: StaffRole | undefined) => hasRole(role, MANAGER_ROLES);
 export const canPlatform = (role: StaffRole | undefined) => hasRole(role, PLATFORM_ROLES);
+export const canManageDeptModes = (role: StaffRole | undefined) => hasRole(role, DEPT_MODE_ROLES);
 
 /** 登录后的默认落点：审核角色进工单池，纯平台角色进仪表盘 */
 export function homePathFor(role: StaffRole | undefined): string {

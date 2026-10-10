@@ -4,6 +4,8 @@ import {
   type AppealDTO,
   type AuditLogDTO,
   type DepartmentDTO,
+  type DepartmentModeOverviewDTO,
+  type DepartmentModeSaveResultDTO,
   type ModeDTO,
   type Page,
   type RulesBundleDTO,
@@ -66,6 +68,21 @@ export const updateMode = (
 
 export const deleteMode = (id: string) =>
   request<{ ok: boolean }>(API.admin.mode(id), { method: 'DELETE' });
+
+// ---------------------------------------------------------------------------
+// 部门模式开放配置
+// ---------------------------------------------------------------------------
+
+/** 部门 + 模式全集 + 各部门当前开放关系，一次性拉取供页面渲染 */
+export const fetchDepartmentModesOverview = () =>
+  request<DepartmentModeOverviewDTO>(API.admin.departmentModeOverview);
+
+/** 全量覆盖保存某部门开放的模式（幂等） */
+export const putDepartmentModes = (departmentId: string, modeIds: string[]) =>
+  request<DepartmentModeSaveResultDTO>(API.admin.departmentModes(departmentId), {
+    method: 'PUT',
+    body: JSON.stringify({ mode_ids: modeIds }),
+  });
 
 // ---------------------------------------------------------------------------
 // 人员管理

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
+  ApartmentOutlined,
   AuditOutlined,
   ClusterOutlined,
   DashboardOutlined,
@@ -19,7 +20,7 @@ import {
 import { App, Avatar, Tooltip } from 'antd';
 import { ROLE_LABELS, type StaffRole } from '@sr/shared';
 import { useAuth } from '../auth/AuthContext';
-import { canManage, canPlatform, canReview } from '../roles';
+import { canManage, canManageDeptModes, canPlatform, canReview } from '../roles';
 
 interface NavItem {
   path: string;
@@ -48,6 +49,7 @@ export function AdminLayout() {
       { path: '/keys', label: '接洽码', icon: <KeyOutlined />, allowed: canReview(role) },
       { path: '/stats', label: '仪表盘', icon: <DashboardOutlined />, allowed: canPlatform(role) },
       { path: '/rules', label: '规则配置', icon: <AuditOutlined />, allowed: canManage(role) },
+      { path: '/department-modes', label: '部门模式管理', icon: <ApartmentOutlined />, allowed: canManageDeptModes(role) },
       { path: '/announcements', label: '公告管理', icon: <NotificationOutlined />, allowed: canManage(role) },
       { path: '/appeals', label: '申诉处理', icon: <SolutionOutlined />, allowed: canManage(role) },
       { path: '/robot', label: '机器人管理', icon: <RobotOutlined />, allowed: canManage(role) },
